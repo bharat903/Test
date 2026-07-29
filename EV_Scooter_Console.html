@@ -80,6 +80,49 @@
   }
   .filters-toggle:hover{border-color:var(--teal); color:var(--teal);}
   .filters-toggle.active{background:var(--teal); border-color:var(--teal); color:#fff;}
+  .explore-toggle{background:var(--teal); border-color:var(--teal); color:#fff;}
+  .explore-toggle:hover{background:#0b756c; color:#fff;}
+
+  /* ---------- PARAMETER EXPLORER ---------- */
+  .param-modal{max-width:1150px; height:calc(100vh - 60px);}
+  .param-layout{display:flex; flex:1; min-height:0;}
+  .param-nav{
+    width:260px; flex-shrink:0; border-right:1px solid var(--line); overflow-y:auto; padding:10px 0;
+    background:var(--panel-alt);
+  }
+  .param-nav h6{
+    font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-faint);
+    margin:14px 16px 6px;
+  }
+  .param-nav .p-item{
+    display:block; width:100%; text-align:left; padding:7px 16px; border:none; background:none; cursor:pointer;
+    font-size:12.5px; color:var(--ink-soft); border-left:3px solid transparent;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .param-nav .p-item:hover{background:rgba(14,140,130,.08); color:var(--ink);}
+  .param-nav .p-item.active{background:#fff; border-left-color:var(--teal); color:var(--teal); font-weight:700;}
+  .param-view{flex:1; overflow-y:auto; padding:20px 26px;}
+  .param-view h4{margin:0 0 4px; font-size:16.5px;}
+  .param-view .p-hint{font-size:12px; color:var(--ink-faint); margin:0 0 18px; line-height:1.5;}
+  .p-rank-row{display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid #F0F3F2;}
+  .p-rank-num{font-family:var(--mono); font-size:12px; color:var(--ink-faint); width:24px; flex-shrink:0;}
+  .p-rank-name{flex:0 0 230px; font-size:12.5px; min-width:0;}
+  .p-rank-name b{display:block; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .p-rank-name span{color:var(--ink-faint); font-size:11px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .p-rank-track{flex:1; height:9px; background:var(--panel-alt); border-radius:5px; overflow:hidden;}
+  .p-rank-fill{height:100%; border-radius:5px;}
+  .p-rank-val{flex:0 0 auto; font-family:var(--mono); font-size:12px; color:var(--ink); min-width:74px; text-align:right;}
+  .p-group{margin-bottom:16px; border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  .p-group-head{
+    padding:9px 14px; background:var(--panel-alt); display:flex; justify-content:space-between; gap:10px;
+    font-size:12.5px; color:var(--ink); align-items:baseline;
+  }
+  .p-group-head .cnt{font-family:var(--mono); font-size:11px; color:var(--ink-faint); flex-shrink:0;}
+  .p-group-body{padding:10px 14px; display:flex; flex-wrap:wrap; gap:6px;}
+  .p-veh-chip{
+    font-family:var(--mono); font-size:11px; padding:4px 9px; border-radius:999px; background:var(--panel);
+    border:1px solid var(--line);
+  }
 
   /* ---------- FILTERS PANEL ---------- */
   .filters-panel{
@@ -281,6 +324,7 @@
   </select>
   <input type="search" id="searchBox" placeholder="Search model or variant…">
   <button class="filters-toggle" id="filtersToggle">Filters ▾</button>
+  <button class="filters-toggle explore-toggle" id="exploreBtn">⇕ Explore by parameter</button>
   <div class="count-pill" id="countPill"></div>
 </div>
 
@@ -343,6 +387,19 @@
       </div>
       <div class="cmp-bars" id="cmpBars"></div>
       <table class="cmp show-diff" id="cmpTable"></table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="paramModalBg">
+  <div class="modal param-modal">
+    <div class="modal-head">
+      <h3>Explore by parameter</h3>
+      <button id="paramModalClose">✕</button>
+    </div>
+    <div class="param-layout">
+      <aside class="param-nav" id="paramNav"></aside>
+      <div class="param-view" id="paramView"></div>
     </div>
   </div>
 </div>
@@ -803,6 +860,119 @@ function openCompare(ids){
   cmpBars.innerHTML = buildCmpBars(items);
   modalBg.classList.add('show');
 }
+
+// ---------------- EXPLORE BY PARAMETER ----------------
+function parseKw(s){ if(!s) return null; const m = String(s).match(/([\d.]+)\s*kW/i); return m ? parseFloat(m[1]) : null; }
+function parseYears(s){ if(!s) return null; const m = String(s).match(/([\d.]+)\s*yr/i); return m ? parseFloat(m[1]) : null; }
+function parseChargeHours(s){
+  if(!s) return null;
+  const m = String(s).match(/([\d.]+)\s*hrs?\.?\s*(?:(\d+)\s*min)?/i);
+  if(!m) return null;
+  return parseFloat(m[1]) + (m[2] ? parseInt(m[2])/60 : 0);
+}
+
+// keys with a genuinely comparable single number; everything else in ALL_KEYS
+// is descriptive text and gets grouped instead of ranked
+const PARAM_RANK = {
+  price:{get:it=>it._priceL, unit:'₹L', better:'low'},
+  range:{get:it=>it._rangeKm, unit:'km', better:'high'},
+  maxSpeed:{get:it=>it._speed, unit:'km/h', better:'high'},
+  battery:{get:it=>it._battKwh, unit:'kWh', better:'high'},
+  kerb:{get:it=>it._kerbKg, unit:'kg', better:'low'},
+  gc:{get:it=>firstNum(it.gc), unit:'mm', better:'high'},
+  storage:{get:it=>firstNum(it.storage), unit:'L', better:'high'},
+  motorCap:{get:it=>parseKw(it.motorCap), unit:'kW', better:'high'},
+  battWarr:{get:it=>parseYears(it.battWarr), unit:'yr', better:'high'},
+  scooterWarr:{get:it=>parseYears(it.scooterWarr), unit:'yr', better:'high'},
+  chargeTime:{get:it=>parseChargeHours(it.chargeTime), unit:'hr', better:'low'},
+};
+
+const EXPLORE_GROUPS = [["Pricing", ["price"]], ...DETAIL_GROUPS];
+
+const paramModalBg = document.getElementById('paramModalBg');
+const paramNav = document.getElementById('paramNav');
+const paramView = document.getElementById('paramView');
+let activeParam = 'range';
+
+EXPLORE_GROUPS.forEach(([title,keys])=>{
+  const h = document.createElement('h6');
+  h.textContent = title;
+  paramNav.appendChild(h);
+  keys.forEach(k=>{
+    const b = document.createElement('button');
+    b.className = 'p-item' + (k===activeParam ? ' active' : '');
+    b.textContent = LABELS[k];
+    b.title = LABELS[k];
+    b.dataset.key = k;
+    b.addEventListener('click', ()=>{
+      activeParam = k;
+      paramNav.querySelectorAll('.p-item').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderParamView(k);
+    });
+    paramNav.appendChild(b);
+  });
+});
+
+function renderParamView(key){
+  const metric = PARAM_RANK[key];
+  if(metric){
+    const withVal = ITEMS.map(it=>({it, v: metric.get(it)})).filter(x=>x.v!=null);
+    const noVal = ITEMS.filter(it=>metric.get(it)==null);
+    withVal.sort((a,b)=> metric.better==='high' ? b.v-a.v : a.v-b.v);
+    const max = Math.max(...withVal.map(x=>x.v), 1);
+
+    let html = `<h4>${LABELS[key]}</h4>
+      <p class="p-hint">Ranked ${metric.better==='high' ? 'high → low' : 'low → high'}
+      (${metric.better==='high' ? 'higher' : 'lower'} is generally better) across
+      ${withVal.length} of ${ITEMS.length} variants with a published figure.</p>`;
+
+    html += withVal.map((x,i)=>{
+      const p = Math.round(100 * (x.v / max));
+      const displayVal = Number.isInteger(x.v) ? x.v : x.v.toFixed(2);
+      return `<div class="p-rank-row">
+        <div class="p-rank-num">#${i+1}</div>
+        <div class="p-rank-name"><b style="color:${x.it._color}">${x.it.brand} ${x.it.model}</b><span>${x.it.variant}</span></div>
+        <div class="p-rank-track"><div class="p-rank-fill" style="width:${p}%; background:${x.it._color}"></div></div>
+        <div class="p-rank-val">${displayVal} ${metric.unit}</div>
+      </div>`;
+    }).join('');
+
+    if(noVal.length){
+      html += `<div class="p-group" style="margin-top:16px;">
+        <div class="p-group-head"><span>No published figure</span><span class="cnt">${noVal.length} variant${noVal.length>1?'s':''}</span></div>
+        <div class="p-group-body">${noVal.map(it=>`<span class="p-veh-chip" style="color:${it._color}">${it.brand} ${it.model}</span>`).join('')}</div>
+      </div>`;
+    }
+    paramView.innerHTML = html;
+  } else {
+    const groups = new Map();
+    ITEMS.forEach(it=>{
+      const val = it[key] || '—';
+      if(!groups.has(val)) groups.set(val, []);
+      groups.get(val).push(it);
+    });
+    const sortedGroups = [...groups.entries()].sort((a,b)=>b[1].length-a[1].length);
+
+    let html = `<h4>${LABELS[key]}</h4>
+      <p class="p-hint">This spec isn't a single comparable number, so variants are grouped by their exact
+      reported value — ${sortedGroups.length} distinct value${sortedGroups.length>1?'s':''} across ${ITEMS.length} variants.</p>`;
+
+    html += sortedGroups.map(([val,items])=>`
+      <div class="p-group">
+        <div class="p-group-head"><span>${val}</span><span class="cnt">${items.length} variant${items.length>1?'s':''}</span></div>
+        <div class="p-group-body">${items.map(it=>`<span class="p-veh-chip" style="color:${it._color}">${it.brand} ${it.model} — ${it.variant.split('(')[0].trim()}</span>`).join('')}</div>
+      </div>`).join('');
+    paramView.innerHTML = html;
+  }
+}
+
+document.getElementById('exploreBtn').addEventListener('click', ()=>{
+  paramModalBg.classList.add('show');
+  renderParamView(activeParam);
+});
+document.getElementById('paramModalClose').addEventListener('click', ()=>paramModalBg.classList.remove('show'));
+paramModalBg.addEventListener('click', e=>{ if(e.target===paramModalBg) paramModalBg.classList.remove('show'); });
 
 render();
 renderTray();
