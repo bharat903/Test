@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EV Scooter Console — India, Jul 2026</title>
+<style>
+  :root{
+    --bg:#F3F6F5;
+    --panel:#FFFFFF;
+    --panel-alt:#E9EFED;
+    --ink:#12233B;
+    --ink-soft:#54697C;
+    --ink-faint:#8CA0AF;
+    --line:#D6E0DC;
+    --amber:#F4A522;
+    --teal:#0E8C82;
+    --crimson:#D6493F;
+    --radius:14px;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", "Inter", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);}
+  ::selection{background:var(--amber);color:#111;}
+
+  /* ---------- HEADER ---------- */
+  header.top{
+    padding:36px clamp(18px,4vw,56px) 24px;
+    border-bottom:1px solid var(--line);
+    background:
+      radial-gradient(circle at 100% 0%, rgba(14,140,130,0.08), transparent 45%),
+      var(--bg);
+  }
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--teal); display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--amber);
+    box-shadow:0 0 0 3px rgba(244,165,34,.25); display:inline-block;}
+  h1{
+    font-size:clamp(28px,4vw,42px); line-height:1.05; margin:0 0 8px; font-weight:800; letter-spacing:-0.02em;
+  }
+  h1 span{color:var(--teal);}
+  .sub{max-width:640px; color:var(--ink-soft); font-size:15px; line-height:1.55; margin:0 0 22px;}
+  .legend{display:flex; flex-wrap:wrap; gap:8px 10px;}
+  .legend .chip{
+    font-family:var(--mono); font-size:11px; padding:5px 10px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel); display:flex; align-items:center; gap:6px; color:var(--ink-soft);
+  }
+  .legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+
+  /* ---------- CONTROLS ---------- */
+  .controls{
+    position:sticky; top:0; z-index:20; background:rgba(243,246,245,.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    padding:14px clamp(18px,4vw,56px);
+    display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center;
+  }
+  .brand-toggle{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.03em; padding:7px 12px; border-radius:999px;
+    border:1.5px solid var(--line); background:var(--panel); cursor:pointer; color:var(--ink-soft);
+    transition:all .15s ease; user-select:none;
+  }
+  .brand-toggle.active{ color:#fff; border-color:transparent; }
+  .controls select, .controls input[type=search]{
+    font-family:var(--sans); font-size:13px; padding:8px 12px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--panel); color:var(--ink); outline:none;
+  }
+  .controls input[type=search]{min-width:200px;}
+  .controls select:focus, .controls input:focus{border-color:var(--teal);}
+  .count-pill{
+    margin-left:auto; font-family:var(--mono); font-size:11.5px; color:var(--ink-faint);
+    padding:6px 0;
+  }
+  .filters-toggle{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.03em; padding:7px 12px; border-radius:999px;
+    border:1.5px solid var(--line); background:var(--panel); cursor:pointer; color:var(--ink-soft);
+    transition:all .15s ease;
+  }
+  .filters-toggle:hover{border-color:var(--teal); color:var(--teal);}
+  .filters-toggle.active{background:var(--teal); border-color:var(--teal); color:#fff;}
+
+  /* ---------- FILTERS PANEL ---------- */
+  .filters-panel{
+    display:none; padding:16px clamp(18px,4vw,56px); border-bottom:1px solid var(--line);
+    background:var(--panel); gap:22px; flex-wrap:wrap;
+  }
+  .filters-panel.open{display:flex;}
+  .filter-block{min-width:190px;}
+  .filter-block h5{
+    font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.09em;
+    color:var(--ink-faint); margin:0 0 8px;
+  }
+  .range-field{display:flex; flex-direction:column; gap:4px; margin-bottom:6px;}
+  .range-field label{font-size:11px; color:var(--ink-soft); display:flex; justify-content:space-between; font-family:var(--mono);}
+  .range-field input[type=range]{width:180px; accent-color:var(--teal);}
+  .filter-chips{display:flex; gap:6px; flex-wrap:wrap; max-width:220px;}
+  .filter-chip{
+    font-family:var(--mono); font-size:11px; padding:5px 10px; border-radius:999px; border:1.5px solid var(--line);
+    background:var(--panel-alt); cursor:pointer; color:var(--ink-soft); user-select:none; transition:all .15s;
+  }
+  .filter-chip.active{background:var(--teal); border-color:var(--teal); color:#fff;}
+  .reset-filters{
+    font-family:var(--mono); font-size:11px; background:none; border:1.5px solid var(--line); color:var(--ink-soft);
+    padding:7px 14px; border-radius:8px; cursor:pointer; align-self:flex-end; height:fit-content;
+  }
+  .reset-filters:hover{border-color:var(--crimson); color:var(--crimson);}
+
+  /* ---------- GRID ---------- */
+  main{padding:26px clamp(18px,4vw,56px) 120px;}
+  .grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; display:flex; flex-direction:column; position:relative;
+    box-shadow:0 1px 2px rgba(18,35,59,.04);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .card:hover{transform:translateY(-3px); box-shadow:0 10px 22px rgba(18,35,59,.12);}
+  .badge-row{display:flex; gap:6px; flex-wrap:wrap; padding:0 20px 8px;}
+  .badge{
+    font-family:var(--mono); font-size:9.5px; letter-spacing:.03em; padding:3px 9px; border-radius:999px;
+    color:#fff; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;
+  }
+  .badge.range{background:var(--teal);}
+  .badge.price{background:var(--amber); color:#1a1200;}
+  .badge.speed{background:var(--crimson);}
+  .card .stripe{position:absolute; top:0; left:0; width:5px; height:100%;}
+  .card-top{padding:16px 16px 10px 20px; display:flex; gap:12px; align-items:flex-start;}
+  .card-id{flex:1; min-width:0;}
+  .brand-tag{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;}
+  .model-name{font-size:15.5px; font-weight:700; margin:2px 0 1px; line-height:1.25;}
+  .variant-name{font-size:12px; color:var(--ink-soft); line-height:1.3;}
+
+  .gauge-wrap{width:76px; height:56px; flex-shrink:0; position:relative;}
+  .gauge-wrap svg{width:100%; height:100%; overflow:visible;}
+  .gauge-val{position:absolute; bottom:2px; left:0; right:0; text-align:center; font-family:var(--mono); font-weight:700; font-size:15px;}
+  .gauge-unit{position:absolute; bottom:-10px; left:0; right:0; text-align:center; font-family:var(--mono); font-size:8px; color:var(--ink-faint); letter-spacing:.06em;}
+
+  .stat-row{display:flex; gap:8px; padding:10px 20px 14px; flex-wrap:wrap;}
+  .stat{
+    background:var(--panel-alt); border-radius:8px; padding:6px 10px; flex:1; min-width:74px;
+  }
+  .stat .k{font-family:var(--mono); font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); display:block;}
+  .stat .v{font-family:var(--mono); font-size:13px; font-weight:700; color:var(--ink); margin-top:2px; display:block;}
+  .stat .bar{height:3px; border-radius:2px; background:var(--line); margin-top:5px; overflow:hidden;}
+  .stat .bar span{display:block; height:100%; border-radius:2px;}
+
+  /* ---------- YES/NO ICON ---------- */
+  .yn{display:inline-flex; align-items:center; gap:5px;}
+  .yn svg{width:13px; height:13px; flex-shrink:0;}
+  .yn.yes{color:var(--teal);}
+  .yn.no{color:var(--crimson);}
+
+  .card-actions{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:10px 20px; border-top:1px solid var(--line); margin-top:auto;
+  }
+  .compare-label{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-soft); cursor:pointer;}
+  .compare-label input{accent-color:var(--teal); width:15px; height:15px; cursor:pointer;}
+  .details-btn{
+    font-family:var(--mono); font-size:11px; letter-spacing:.04em; background:none; border:1.5px solid var(--line);
+    color:var(--ink); padding:6px 11px; border-radius:8px; cursor:pointer; transition:all .15s;
+  }
+  .details-btn:hover{border-color:var(--teal); color:var(--teal);}
+
+  .details{
+    display:none; padding:4px 20px 18px; border-top:1px dashed var(--line);
+  }
+  .details.open{display:block;}
+  .dgroup{margin-top:12px;}
+  .dgroup h4{
+    font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--teal);
+    margin:0 0 8px; display:flex; align-items:center; gap:8px;
+  }
+  .dgroup h4::after{content:""; flex:1; height:1px; background:var(--line);}
+  .drow{display:flex; gap:10px; padding:5px 0; font-size:12.5px; border-bottom:1px solid #F0F3F2;}
+  .drow:last-child{border-bottom:none;}
+  .drow .dk{flex:0 0 42%; color:var(--ink-faint); font-size:11.5px;}
+  .drow .dv{flex:1; color:var(--ink); line-height:1.45;}
+  .drow .dv.warn{color:var(--crimson);}
+
+  /* ---------- COMPARE TRAY ---------- */
+  .tray{
+    position:fixed; bottom:0; left:0; right:0; z-index:40; background:var(--ink); color:#fff;
+    padding:12px clamp(18px,4vw,56px); display:flex; align-items:center; gap:14px;
+    transform:translateY(110%); transition:transform .25s ease; box-shadow:0 -6px 24px rgba(18,35,59,.25);
+  }
+  .tray.show{transform:translateY(0);}
+  .tray-items{display:flex; gap:8px; flex:1; flex-wrap:wrap;}
+  .tray-chip{
+    font-family:var(--mono); font-size:11px; background:rgba(255,255,255,.1); padding:5px 10px; border-radius:999px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .tray-chip button{background:none; border:none; color:#fff; opacity:.6; cursor:pointer; font-size:13px; padding:0;}
+  .tray button.go{
+    font-family:var(--mono); font-size:12.5px; background:var(--amber); color:#1a1200; border:none;
+    padding:10px 18px; border-radius:9px; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+  .tray button.go:disabled{opacity:.35; cursor:not-allowed;}
+
+  /* ---------- MODAL ---------- */
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(18,35,59,.55); z-index:60; display:none;
+    align-items:flex-start; justify-content:center; padding:40px 18px; overflow:auto;
+  }
+  .modal-bg.show{display:flex;}
+  .modal{
+    background:var(--panel); border-radius:var(--radius); max-width:1200px; width:100%;
+    max-height:calc(100vh - 60px); display:flex; flex-direction:column; overflow:hidden;
+  }
+  .modal-head{padding:18px 22px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;}
+  .modal-head h3{margin:0; font-size:17px;}
+  .modal-head button{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-soft);}
+  .modal-body{overflow:auto; padding:0;}
+  .cmp-toolbar{
+    padding:10px 22px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line);
+    font-size:12px; color:var(--ink-soft); background:var(--panel-alt);
+  }
+  .cmp-toolbar label{display:flex; align-items:center; gap:6px; cursor:pointer;}
+  .cmp-toolbar input{accent-color:var(--teal);}
+  .cmp-bars{padding:16px 22px; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:14px;}
+  .cmp-bar-metric h5{
+    font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-faint); margin:0 0 8px;
+  }
+  .cmp-bar-row{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .cmp-bar-label{flex:0 0 190px; font-size:11.5px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cmp-bar-track{flex:1; height:10px; background:var(--panel-alt); border-radius:5px; overflow:hidden;}
+  .cmp-bar-fill{height:100%; border-radius:5px; transition:width .4s ease;}
+  .cmp-bar-val{flex:0 0 auto; font-family:var(--mono); font-size:11px; color:var(--ink); min-width:64px; text-align:right;}
+  table.cmp{border-collapse:collapse; width:100%; font-size:12.5px;}
+  table.cmp th, table.cmp td{padding:9px 14px; border-bottom:1px solid #EEF2F1; text-align:left; vertical-align:top;}
+  table.cmp thead th{
+    position:sticky; top:0; background:var(--panel); z-index:2; font-family:var(--mono); font-size:11px;
+    text-transform:uppercase; letter-spacing:.05em; border-bottom:2px solid var(--line);
+  }
+  table.cmp tbody th{
+    position:sticky; left:0; background:var(--panel-alt); font-weight:600; z-index:1; min-width:160px;
+    color:var(--ink-soft); font-size:11.5px;
+  }
+  table.cmp td{min-width:210px; color:var(--ink); line-height:1.45;}
+  table.cmp tr:nth-child(even) td{background:#FAFBFA;}
+  table.cmp td.best{background:rgba(14,140,130,.12); font-weight:700; color:var(--teal);}
+  table.cmp.show-diff tr.differs td{background:#FFFBEA;}
+  table.cmp.show-diff tr.differs td.best{background:rgba(14,140,130,.16);}
+
+  /* ---------- FOOTER ---------- */
+  footer{
+    padding:26px clamp(18px,4vw,56px) 40px; border-top:1px solid var(--line); color:var(--ink-faint);
+    font-size:12px; line-height:1.7; max-width:900px;
+  }
+  footer b{color:var(--ink-soft);}
+
+  @media (max-width:640px){
+    .stat{min-width:60px;}
+    table.cmp tbody th{min-width:120px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="eyebrow">India · Electric Two-Wheelers · Data as of Jul 2026</div>
+  <h1>EV Scooter <span>Console</span></h1>
+  <p class="sub">A dashboard-style comparison of 10 electric scooters sold in India (24 battery/trim variants) — Ather Rizta &amp; 450X, TVS iQube &amp; Orbiter, Hero Vida VX2 &amp; VX2 Go, Bajaj Chetak (25/30/35 Series), and River Indie. Tap a card to open its full spec sheet, or select up to 4 for a side-by-side table.</p>
+  <div class="legend" id="legend"></div>
+</header>
+
+<div class="controls">
+  <div id="brandToggles" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+  <select id="sortSel">
+    <option value="range_desc">Sort: Range (high→low)</option>
+    <option value="price_asc">Sort: Price (low→high)</option>
+    <option value="price_desc">Sort: Price (high→low)</option>
+    <option value="speed_desc">Sort: Top speed (high→low)</option>
+    <option value="battery_desc">Sort: Battery capacity (high→low)</option>
+    <option value="kerb_asc">Sort: Kerb weight (low→high)</option>
+    <option value="brand">Sort: Brand / Model</option>
+  </select>
+  <input type="search" id="searchBox" placeholder="Search model or variant…">
+  <button class="filters-toggle" id="filtersToggle">Filters ▾</button>
+  <div class="count-pill" id="countPill"></div>
+</div>
+
+<div class="filters-panel" id="filtersPanel">
+  <div class="filter-block">
+    <h5>Price (₹ Lakh, on-road BLR)</h5>
+    <div class="range-field">
+      <label>Min <span id="priceMinLbl"></span></label>
+      <input type="range" id="priceMinSlider">
+    </div>
+    <div class="range-field">
+      <label>Max <span id="priceMaxLbl"></span></label>
+      <input type="range" id="priceMaxSlider">
+    </div>
+  </div>
+  <div class="filter-block">
+    <h5>Range (km, IDC claimed)</h5>
+    <div class="range-field">
+      <label>Min <span id="rangeMinLbl"></span></label>
+      <input type="range" id="rangeMinSlider">
+    </div>
+    <div class="range-field">
+      <label>Max <span id="rangeMaxLbl"></span></label>
+      <input type="range" id="rangeMaxSlider">
+    </div>
+  </div>
+  <div class="filter-block">
+    <h5>Battery chemistry</h5>
+    <div class="filter-chips" id="chemChips"></div>
+  </div>
+  <div class="filter-block">
+    <h5>Motor type</h5>
+    <div class="filter-chips" id="motorChips"></div>
+  </div>
+  <div class="filter-block">
+    <h5>Water / dust resistance</h5>
+    <div class="filter-chips" id="ipChips"></div>
+  </div>
+  <button class="reset-filters" id="resetFilters">Reset filters</button>
+</div>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="tray" id="tray">
+  <div class="tray-items" id="trayItems"></div>
+  <button class="go" id="compareBtn" disabled>Compare →</button>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Side-by-side comparison</h3>
+      <button id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="cmp-toolbar">
+        <label><input type="checkbox" id="diffToggle" checked> Highlight differing specs</label>
+      </div>
+      <div class="cmp-bars" id="cmpBars"></div>
+      <table class="cmp show-diff" id="cmpTable"></table>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <b>How to read this:</b> "Not publicly disclosed" means the spec isn't published anywhere found in this research pass. Figures marked (approx.) or (est.) are directional, drawn from reviews/forums rather than brochures — verify with the dealer before buying. Real-world range varies with rider weight, terrain, weather and riding style. On-road Bangalore prices are approximate (ex-showroom + RTO + insurance) and shift with dealer offers and subsidy status.<br>
+  <b>Sources:</b> atherenergy.com, tvsmotor.com, chetak.com, vidaworld.com, River Mobility brand pages, bikedekho.com, bikewale.com, autocarindia.com, 91wheels.com, zigwheels.com, thebikejunction.com, ev.care, e-vehicleinfo.com — compiled Jul 21, 2026.
+</footer>
+
+<script>
+const DATASET = {"columns": ["Brand", "Model", "Variant / Sub-model", "Available Battery Capacity", "Actual (Real-World) Range per Capacity", "Regen (Regenerative Braking) Options", "Ground Clearance", "Disc Brake - Front", "Disc Brake - Rear", "Suspension - Front", "Suspension - Rear", "Motor Type", "Motor Capacity (Peak Power / Torque)", "Battery Type (Chemistry)", "Storage Space (Underseat)", "Charging Time (0-80% / Full)", "Fast Charging", "Charger Type", "Charger Capacity", "Riding Modes Available", "Range per Mode (approx.)", "Scooter Warranty (Standard)", "Battery Warranty (Standard)", "Additional Warranty Available", "Additional Warranty Type", "Navigation", "Display Type", "Touch Display", "Cruise Control", "Gradeability", "Max Speed (mode-wise)", "Water & Dust Resistance (IP Rating)", "Parking Assist / Reverse Mode", "Tyre Size - Front", "Tyre Size - Rear", "Tyre Type (Tube/Tubeless)", "Hill Hold Assist", "Dimensions (L x W x H)", "Distance to Empty (DTE) Display", "Warranty Transfer to 2nd Owner", "Holiday / Storage Mode", "Reported Deep-Discharge Issue", "Kerb Weight", "Seat Length", "Seat Width", "Major Reported Complaints (forums/reviews)", "Max Load-Bearing Capacity", "On-Road Price in Bangalore (approx.)", "Primary Sources (as of Jul 2026)"], "rows": [["Ather", "Rizta", "Rizta S 2.7 kWh (LFP, prev. 2.9 kWh NMC)", "2.7 kWh (LFP) / prev. 2.9 kWh NMC", "123 km IDC claimed / ~100 km TrueRange (real-world)", "Yes - Ather 'Magic Twist' multi-level regenerative braking (adjustable via app/dash)", "150 mm", "Yes (front disc)", "Drum with CBS (rear)", "Telescopic", "Monoshock", "PMSM (Permanent Magnet Synchronous Motor), hub-mounted", "4.3 kW peak, 22 Nm torque", "LFP (from Jul 2026; earlier NMC Li-ion)", "34 litres underseat (fits 1 full-face helmet)", "6 hr 30 min (0-80%) / 8 hr 30 min full", "No public DC fast-charging port on the scooter; can use Ather Grid AC fast-charging points in-city (still AC, faster than home charger)", "Portable AC charger (plug-in, carried in boot or wall-mounted)", "~750 W (portable)", "Smart Eco, Zip (Ride) + Reverse", "Eco: up to ~123 km; Zip: lower, exact figure not disclosed", "3 yr / unlimited km", "3 yr / 30,000 km (std)", "Yes - optional, paid", "AtherStack Pro feature pack (nav, park assist, etc.) + Ather Battery Protect (extends battery warranty to 8 yrs/80,000 km @70% SoH) + extended component/vehicle warranty", "No (S variant)", "7-inch TFT", "No", "Not an officially listed standalone feature", "Not publicly disclosed", "80 km/h (top speed same across Smart Eco/Zip modes; power delivery differs)", "IP67-rated battery pack", "Yes - Reverse mode (motor-assisted reverse for parking manoeuvres)", "90/90-12", "100/80-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT dashboard", "Warranty is tied to the vehicle and generally transfers to a new owner along with RC transfer, subject to Ather's policy and service history - confirm at an Ather Space", "No dedicated 'holiday mode' publicly listed", "Not an officially acknowledged issue; some owner-forum reports of noticeable battery drain when parked unused for long periods and of BMS/charging glitches", "111-119 kg", "Not publicly disclosed", "Not publicly disclosed", "Rear drum brake can lock up when combined with regen braking; real-world range often falls short of claimed IDC figures; after-sales service inconsistency reported in some cities/some owners report billed 'free' services; a few pre-production units had seat-closing issues (since resolved)", "Not publicly disclosed", "₹1.21L - ₹1.35L (ex-showroom + RTO/insurance, incl. PM e-Drive subsidy)", "atherenergy.com; bikedekho.com; bikewale.com; autocarindia.com; 91wheels.com"], ["Ather", "Rizta", "Rizta Z 2.7 kWh (LFP, prev. 2.9 kWh NMC)", "2.7 kWh (LFP) / prev. 2.9 kWh NMC", "123 km IDC claimed / ~100 km TrueRange (real-world)", "Yes - Ather 'Magic Twist' multi-level regenerative braking (adjustable via app/dash)", "150 mm", "Yes (front disc)", "Drum with CBS (rear)", "Telescopic", "Monoshock", "PMSM (Permanent Magnet Synchronous Motor), hub-mounted", "4.3 kW peak, 22 Nm torque", "LFP (from Jul 2026; earlier NMC Li-ion)", "34 litres underseat (fits 1 full-face helmet)", "6 hr 30 min (0-80%) / 8 hr 30 min full", "No public DC fast-charging port on the scooter; can use Ather Grid AC fast-charging points in-city (still AC, faster than home charger)", "Portable AC charger (plug-in, carried in boot or wall-mounted)", "~750 W (portable)", "Smart Eco, Zip (Ride) + Reverse", "Eco: up to ~123 km; Zip: lower, exact figure not disclosed", "3 yr / unlimited km", "3 yr / 30,000 km (std, 5 yr/60,000 km w/ Pro Pack)", "Yes - optional, paid", "AtherStack Pro feature pack (nav, park assist, etc.) + Ather Battery Protect (extends battery warranty to 8 yrs/80,000 km @70% SoH) + extended component/vehicle warranty", "Yes - onboard Google Maps navigation (Z variant)", "7-inch TFT", "Yes", "Not an officially listed standalone feature", "Not publicly disclosed", "80 km/h (top speed same across Smart Eco/Zip modes; power delivery differs)", "IP67-rated battery pack", "Yes - Reverse mode (motor-assisted reverse for parking manoeuvres)", "90/90-12", "100/80-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT dashboard", "Warranty is tied to the vehicle and generally transfers to a new owner along with RC transfer, subject to Ather's policy and service history - confirm at an Ather Space", "No dedicated 'holiday mode' publicly listed", "Not an officially acknowledged issue; some owner-forum reports of noticeable battery drain when parked unused for long periods and of BMS/charging glitches", "119-125 kg", "Not publicly disclosed", "Not publicly disclosed", "Rear drum brake can lock up when combined with regen braking; real-world range often falls short of claimed IDC figures; after-sales service inconsistency reported in some cities/some owners report billed 'free' services; a few pre-production units had seat-closing issues (since resolved)", "Not publicly disclosed", "₹1.32L - ₹1.45L (ex-showroom + RTO/insurance, incl. PM e-Drive subsidy)", "atherenergy.com; bikedekho.com; bikewale.com; autocarindia.com; 91wheels.com"], ["Ather", "Rizta", "Rizta S 3.5 kWh (LFP, prev. 3.7 kWh NMC)", "3.5 kWh (LFP) / prev. 3.7 kWh NMC", "161 km IDC claimed / ~125 km TrueRange (real-world)", "Yes - Ather 'Magic Twist' multi-level regenerative braking (adjustable via app/dash)", "150 mm", "Yes (front disc)", "Drum with CBS (rear)", "Telescopic", "Monoshock", "PMSM (Permanent Magnet Synchronous Motor), hub-mounted", "4.3 kW peak, 22 Nm torque", "LFP (from Jul 2026; earlier NMC Li-ion)", "34 litres underseat (fits 1 full-face helmet)", "~8-9 hrs full (exact time not disclosed)", "No public DC fast-charging port on the scooter; can use Ather Grid AC fast-charging points in-city (still AC, faster than home charger)", "Portable AC charger (plug-in, carried in boot or wall-mounted)", "~750-900 W (portable, approx.)", "Smart Eco, Zip (Ride) + Reverse", "Eco: up to ~161 km; Zip: lower, exact figure not disclosed", "3 yr / unlimited km", "3 yr / 30,000 km (std)", "Yes - optional, paid", "AtherStack Pro feature pack (nav, park assist, etc.) + Ather Battery Protect (extends battery warranty to 8 yrs/80,000 km @70% SoH) + extended component/vehicle warranty", "No (S variant)", "7-inch TFT", "No", "Not an officially listed standalone feature", "Not publicly disclosed", "80 km/h (top speed same across Smart Eco/Zip modes; power delivery differs)", "IP67-rated battery pack", "Yes - Reverse mode (motor-assisted reverse for parking manoeuvres)", "90/90-12", "100/80-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT dashboard", "Warranty is tied to the vehicle and generally transfers to a new owner along with RC transfer, subject to Ather's policy and service history - confirm at an Ather Space", "No dedicated 'holiday mode' publicly listed", "Not an officially acknowledged issue; some owner-forum reports of noticeable battery drain when parked unused for long periods and of BMS/charging glitches", "~120-127 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Rear drum brake can lock up when combined with regen braking; real-world range often falls short of claimed IDC figures; after-sales service inconsistency reported in some cities/some owners report billed 'free' services; a few pre-production units had seat-closing issues (since resolved)", "Not publicly disclosed", "₹1.38L - ₹1.55L (ex-showroom + RTO/insurance, incl. PM e-Drive subsidy)", "atherenergy.com; bikedekho.com; bikewale.com; autocarindia.com; 91wheels.com"], ["Ather", "Rizta", "Rizta Z 3.5 kWh (LFP, prev. 3.7 kWh NMC)", "3.5 kWh (LFP) / prev. 3.7 kWh NMC", "161 km IDC claimed / ~125 km TrueRange (real-world)", "Yes - Ather 'Magic Twist' multi-level regenerative braking (adjustable via app/dash)", "150 mm", "Yes (front disc)", "Drum with CBS (rear)", "Telescopic", "Monoshock", "PMSM (Permanent Magnet Synchronous Motor), hub-mounted", "4.3 kW peak, 22 Nm torque", "LFP (from Jul 2026; earlier NMC Li-ion)", "34 litres underseat (fits 1 full-face helmet)", "~8-9 hrs full (exact time not disclosed)", "No public DC fast-charging port on the scooter; can use Ather Grid AC fast-charging points in-city (still AC, faster than home charger)", "Portable AC charger (plug-in, carried in boot or wall-mounted)", "~750-900 W (portable, approx.)", "Smart Eco, Zip (Ride) + Reverse", "Eco: up to ~161 km; Zip: lower, exact figure not disclosed", "3 yr / unlimited km", "3 yr / 30,000 km (std, 5 yr/60,000 km w/ Pro Pack)", "Yes - optional, paid", "AtherStack Pro feature pack (nav, park assist, etc.) + Ather Battery Protect (extends battery warranty to 8 yrs/80,000 km @70% SoH) + extended component/vehicle warranty", "Yes - onboard Google Maps navigation (Z variant)", "7-inch TFT", "Yes", "Not an officially listed standalone feature", "Not publicly disclosed", "80 km/h (top speed same across Smart Eco/Zip modes; power delivery differs)", "IP67-rated battery pack", "Yes - Reverse mode (motor-assisted reverse for parking manoeuvres)", "90/90-12", "100/80-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT dashboard", "Warranty is tied to the vehicle and generally transfers to a new owner along with RC transfer, subject to Ather's policy and service history - confirm at an Ather Space", "No dedicated 'holiday mode' publicly listed", "Not an officially acknowledged issue; some owner-forum reports of noticeable battery drain when parked unused for long periods and of BMS/charging glitches", "~120-127 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Rear drum brake can lock up when combined with regen braking; real-world range often falls short of claimed IDC figures; after-sales service inconsistency reported in some cities/some owners report billed 'free' services; a few pre-production units had seat-closing issues (since resolved)", "Not publicly disclosed", "₹1.52L - ₹1.77L (ex-showroom + RTO/insurance, incl. PM e-Drive subsidy)", "atherenergy.com; bikedekho.com; bikewale.com; autocarindia.com; 91wheels.com"], ["Ather", "450X", "450X 2.9 kWh (IDC 126 km)", "2.9 kWh", "126 km IDC claimed / ~90-105 km real-world", "Yes - Ather Magic Twist multi-level regenerative braking", "~165 mm (brand-typical figure; not independently re-verified this session)", "Front disc", "Rear drum", "Telescopic", "Monoshock", "PMSM, hub-mounted", "6.4 kW peak", "NMC Li-ion", "~22 litres underseat (approx., smaller than Rizta; not independently re-verified this session)", "~4.3 hrs (0-80%, approx.)", "No public DC fast charge port; Ather Grid AC fast-charging network usable in-city", "Portable AC charger", "~750 W (approx.)", "Eco, Ride/Sport, Warp + Reverse", "Warp: shortest range; Eco: longest, up to claimed IDC figure (exact per-mode km not disclosed)", "3 yr / unlimited km", "3 yr / 30,000 km (std; 8 yr/80,000 km @70% SoH via Ather Battery Protect, paid)", "Yes - optional, paid (Pro Pack)", "AtherStack Pro Pack (navigation, park assist, Bluetooth) + extended component warranty", "Available with Pro Pack variants; standard variants lack onboard navigation", "7-inch TFT touchscreen (all current variants)", "Yes", "Not an officially listed standalone feature", "Not publicly disclosed", "90 km/h top speed (Warp mode)", "IP67-rated battery pack", "Yes - Reverse mode", "90/90-12", "100/80-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT dashboard", "Warranty generally transfers with RC transfer, subject to Ather's policy - confirm at an Ather Space", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; scattered owner-forum reports of battery drain when idle for long periods", "108-111 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Real-world range lower than claimed IDC figures; rear brake feel criticised by some reviewers on drum-brake variants; charging infra still limited in some cities; a few users report firmware/OTA-related glitches", "Not publicly disclosed", "₹1.52L - ₹1.61L", "bikedekho.com; bikewale.com; zigwheels.com; 91wheels.com; otocapital.in"], ["Ather", "450X", "450X 2.9 kWh Pro Pack", "2.9 kWh", "126 km IDC claimed / ~90-105 km real-world", "Yes - Ather Magic Twist multi-level regenerative braking", "~165 mm (brand-typical figure; not independently re-verified this session)", "Front disc", "Rear drum", "Telescopic", "Monoshock", "PMSM, hub-mounted", "6.4 kW peak", "NMC Li-ion", "~22 litres underseat (approx., smaller than Rizta; not independently re-verified this session)", "~4.3 hrs (0-80%, approx.)", "No public DC fast charge port; Ather Grid AC fast-charging network usable in-city", "Portable AC charger", "~750 W (approx.)", "Eco, Ride/Sport, Warp + Reverse", "Warp: shortest range; Eco: longest, up to claimed IDC figure (exact per-mode km not disclosed)", "3 yr / unlimited km", "3 yr / 30,000 km (std; 8 yr/80,000 km @70% SoH via Ather Battery Protect, paid)", "Yes - optional, paid (Pro Pack)", "AtherStack Pro Pack (navigation, park assist, Bluetooth) + extended component warranty", "Available with Pro Pack variants; standard variants lack onboard navigation", "7-inch TFT touchscreen (all current variants)", "Yes", "Not an officially listed standalone feature", "Not publicly disclosed", "90 km/h top speed (Warp mode)", "IP67-rated battery pack", "Yes - Reverse mode", "90/90-12", "100/80-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT dashboard", "Warranty generally transfers with RC transfer, subject to Ather's policy - confirm at an Ather Space", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; scattered owner-forum reports of battery drain when idle for long periods", "108-111 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Real-world range lower than claimed IDC figures; rear brake feel criticised by some reviewers on drum-brake variants; charging infra still limited in some cities; a few users report firmware/OTA-related glitches", "Not publicly disclosed", "₹1.56L - ₹1.68L", "bikedekho.com; bikewale.com; zigwheels.com; 91wheels.com; otocapital.in"], ["Ather", "450X", "450X 3.5 kWh (prev. 3.7 kWh, IDC 161 km)", "3.5 kWh (NMC; reduced from 3.7 kWh, Jul 2026)", "161 km IDC claimed / ~110-125 km real-world", "Yes - Ather Magic Twist multi-level regenerative braking", "~165 mm (brand-typical figure; not independently re-verified this session)", "Front disc", "Rear drum (Rear disc on some Pro Pack trims - unverified)", "Telescopic", "Monoshock", "PMSM, hub-mounted", "6.4 kW peak", "NMC Li-ion", "~22 litres underseat (approx., smaller than Rizta; not independently re-verified this session)", "~5.5-6 hrs full (approx., not officially disclosed)", "No public DC fast charge port; Ather Grid AC fast-charging network usable in-city", "Portable AC charger", "~750 W (approx.)", "Eco, Ride/Sport, Warp + Reverse", "Warp: shortest range; Eco: longest, up to claimed IDC figure (exact per-mode km not disclosed)", "3 yr / unlimited km", "3 yr / 30,000 km (std; 8 yr/80,000 km @70% SoH via Ather Battery Protect, paid)", "Yes - optional, paid (Pro Pack)", "AtherStack Pro Pack (navigation, park assist, Bluetooth) + extended component warranty", "Available with Pro Pack variants; standard variants lack onboard navigation", "7-inch TFT touchscreen (all current variants)", "Yes", "Not an officially listed standalone feature", "Not publicly disclosed", "90 km/h top speed (Warp mode)", "IP67-rated battery pack", "Yes - Reverse mode", "90/90-12", "100/80-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT dashboard", "Warranty generally transfers with RC transfer, subject to Ather's policy - confirm at an Ather Space", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; scattered owner-forum reports of battery drain when idle for long periods", "~115-120 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Real-world range lower than claimed IDC figures; rear brake feel criticised by some reviewers on drum-brake variants; charging infra still limited in some cities; a few users report firmware/OTA-related glitches", "Not publicly disclosed", "₹1.68L - ₹1.84L", "bikedekho.com; bikewale.com; zigwheels.com; 91wheels.com; otocapital.in"], ["Ather", "450X", "450X 3.5 kWh Pro Pack (top variant)", "3.5 kWh (NMC; reduced from 3.7 kWh, Jul 2026)", "161 km IDC claimed / ~110-125 km real-world", "Yes - Ather Magic Twist multi-level regenerative braking", "~165 mm (brand-typical figure; not independently re-verified this session)", "Front disc", "Rear drum (Rear disc on some Pro Pack trims - unverified)", "Telescopic", "Monoshock", "PMSM, hub-mounted", "6.4 kW peak", "NMC Li-ion", "~22 litres underseat (approx., smaller than Rizta; not independently re-verified this session)", "~5.5-6 hrs full (approx., not officially disclosed)", "No public DC fast charge port; Ather Grid AC fast-charging network usable in-city", "Portable AC charger", "~750 W (approx.)", "Eco, Ride/Sport, Warp + Reverse", "Warp: shortest range; Eco: longest, up to claimed IDC figure (exact per-mode km not disclosed)", "3 yr / unlimited km", "3 yr / 30,000 km (std; 8 yr/80,000 km @70% SoH via Ather Battery Protect, paid)", "Yes - optional, paid (Pro Pack)", "AtherStack Pro Pack (navigation, park assist, Bluetooth) + extended component warranty", "Available with Pro Pack variants; standard variants lack onboard navigation", "7-inch TFT touchscreen (all current variants)", "Yes", "Not an officially listed standalone feature", "Not publicly disclosed", "90 km/h top speed (Warp mode)", "IP67-rated battery pack", "Yes - Reverse mode", "90/90-12", "100/80-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT dashboard", "Warranty generally transfers with RC transfer, subject to Ather's policy - confirm at an Ather Space", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; scattered owner-forum reports of battery drain when idle for long periods", "~115-120 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Real-world range lower than claimed IDC figures; rear brake feel criticised by some reviewers on drum-brake variants; charging infra still limited in some cities; a few users report firmware/OTA-related glitches", "Not publicly disclosed", "₹1.84L - ₹1.98L", "bikedekho.com; bikewale.com; zigwheels.com; 91wheels.com; otocapital.in"], ["TVS", "iQube", "iQube 2.2 kWh (base)", "2.2 kWh", "94-100 km IDC claimed / ~65-75 km real-world (est.)", "Yes - regenerative braking (multi-mode)", "157 mm (ST variant, brand-cited)", "Yes (front disc, standard/optional depending on variant)", "Drum with CBS (rear)", "Telescopic", "Hydraulic twin-tube shock absorber", "BLDC hub motor", "4.4 kW peak, 33 Nm torque", "NMC Li-ion (IP67 sealed pack)", "32 litres underseat (ST); slightly less on base variants (exact not disclosed)", "~5 hrs full (approx.)", "No DC fast charge; standard portable charger only (higher-wattage charger on higher variants)", "Portable plug-and-play charger (15A socket)", "650-950 W depending on variant", "Eco, Power/City, (Sport on ST)", "Eco mode yields closer to claimed IDC range; Power/Sport mode reduces range by ~20-30% (approx.)", "3 yr / unlimited km", "3 yr / 30,000 km (std)", "Yes - optional, paid extended warranty plans via TVS Motor", "Extended vehicle/battery warranty packages (TVS Motor Care)", "Yes on S/ST variants (SmartXonnect turn-by-turn navigation, Alexa skillset on ST); limited/absent on base variant", "5-inch TFT/LCD", "No", "Not officially listed as a standalone feature on most variants", "Not publicly disclosed", "75 km/h (top speed)", "IP67-rated battery pack (twin packs on higher variants)", "Reverse assist / park mode via SmartXonnect app on connected variants", "90/90-12", "90/90-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes - Distance to Empty shown via SmartXonnect/dashboard", "TVS Motor Care warranty is generally linked to the vehicle and transferable on ownership change, subject to TVS policy - confirm with dealer", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; some forum/owner complaints of battery failure before warranty expiry and chassis/BMS issues reported by a subset of users", "~118 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "A vocal minority reports sudden stoppages mid-ride, premature battery failure, and slow/unresponsive customer service; others report low complaint, smooth ownership - experience varies notably by service centre", "Not publicly disclosed", "₹1.15L - ₹1.30L", "tvsmotor.com; bikewale.com; autocarindia.com; bikedekho.com"], ["TVS", "iQube", "iQube 3.1 kWh", "3.1 kWh", "121 km IDC claimed / ~85-95 km real-world (est.)", "Yes - regenerative braking (multi-mode)", "157 mm (ST variant, brand-cited)", "Yes (front disc, standard/optional depending on variant)", "Drum with CBS (rear)", "Telescopic", "Hydraulic twin-tube shock absorber", "BLDC hub motor", "4.4 kW peak, 33 Nm torque", "NMC Li-ion (IP67 sealed pack)", "32 litres underseat (ST); slightly less on base variants (exact not disclosed)", "~5-6 hrs full (approx.)", "No DC fast charge; standard portable charger only (higher-wattage charger on higher variants)", "Portable plug-and-play charger (15A socket)", "650-950 W depending on variant", "Eco, Power/City, (Sport on ST)", "Eco mode yields closer to claimed IDC range; Power/Sport mode reduces range by ~20-30% (approx.)", "3 yr / unlimited km", "3 yr / 30,000 km (std)", "Yes - optional, paid extended warranty plans via TVS Motor", "Extended vehicle/battery warranty packages (TVS Motor Care)", "Yes on S/ST variants (SmartXonnect turn-by-turn navigation, Alexa skillset on ST); limited/absent on base variant", "5-inch TFT/LCD", "No", "Not officially listed as a standalone feature on most variants", "Not publicly disclosed", "78 km/h (top speed)", "IP67-rated battery pack (twin packs on higher variants)", "Reverse assist / park mode via SmartXonnect app on connected variants", "90/90-12", "90/90-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes - Distance to Empty shown via SmartXonnect/dashboard", "TVS Motor Care warranty is generally linked to the vehicle and transferable on ownership change, subject to TVS policy - confirm with dealer", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; some forum/owner complaints of battery failure before warranty expiry and chassis/BMS issues reported by a subset of users", "~120 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "A vocal minority reports sudden stoppages mid-ride, premature battery failure, and slow/unresponsive customer service; others report low complaint, smooth ownership - experience varies notably by service centre", "Not publicly disclosed", "₹1.30L - ₹1.45L", "tvsmotor.com; bikewale.com; autocarindia.com; bikedekho.com"], ["TVS", "iQube", "iQube 3.5 kWh", "3.5 kWh", "~140-150 km IDC claimed / ~95-105 km real-world (est.)", "Yes - regenerative braking (multi-mode)", "157 mm (ST variant, brand-cited)", "Yes (front disc, standard/optional depending on variant)", "Drum with CBS (rear)", "Telescopic", "Hydraulic twin-tube shock absorber", "BLDC hub motor", "4.4 kW peak, 33 Nm torque", "NMC Li-ion (IP67 sealed pack)", "32 litres underseat (ST); slightly less on base variants (exact not disclosed)", "~6 hrs full (approx.)", "No DC fast charge; standard portable charger only (higher-wattage charger on higher variants)", "Portable plug-and-play charger (15A socket)", "650-950 W depending on variant", "Eco, Power/City, (Sport on ST)", "Eco mode yields closer to claimed IDC range; Power/Sport mode reduces range by ~20-30% (approx.)", "3 yr / unlimited km", "3 yr / 30,000 km (std)", "Yes - optional, paid extended warranty plans via TVS Motor", "Extended vehicle/battery warranty packages (TVS Motor Care)", "Yes on S/ST variants (SmartXonnect turn-by-turn navigation, Alexa skillset on ST); limited/absent on base variant", "5-inch TFT/LCD", "No", "Not officially listed as a standalone feature on most variants", "Not publicly disclosed", "78 km/h (top speed)", "IP67-rated battery pack (twin packs on higher variants)", "Reverse assist / park mode via SmartXonnect app on connected variants", "90/90-12", "90/90-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes - Distance to Empty shown via SmartXonnect/dashboard", "TVS Motor Care warranty is generally linked to the vehicle and transferable on ownership change, subject to TVS policy - confirm with dealer", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; some forum/owner complaints of battery failure before warranty expiry and chassis/BMS issues reported by a subset of users", "~122 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "A vocal minority reports sudden stoppages mid-ride, premature battery failure, and slow/unresponsive customer service; others report low complaint, smooth ownership - experience varies notably by service centre", "Not publicly disclosed", "₹1.40L - ₹1.55L", "tvsmotor.com; bikewale.com; autocarindia.com; bikedekho.com"], ["TVS", "iQube", "iQube S 4.7 kWh", "4.7 kWh", "175 km IDC claimed / ~115-125 km real-world (est.)", "Yes - regenerative braking (multi-mode)", "157 mm (ST variant, brand-cited)", "Yes (front disc, standard/optional depending on variant)", "Drum with CBS (rear)", "Telescopic", "Hydraulic twin-tube shock absorber", "BLDC hub motor", "4.4 kW peak, 33 Nm torque", "NMC Li-ion (IP67 sealed pack)", "32 litres underseat (ST); slightly less on base variants (exact not disclosed)", "~5 hrs full with 950W charger (approx.)", "No DC fast charge; standard portable charger only (higher-wattage charger on higher variants)", "Portable plug-and-play charger (15A socket)", "650-950 W depending on variant", "Eco, Power/City, (Sport on ST)", "Eco mode yields closer to claimed IDC range; Power/Sport mode reduces range by ~20-30% (approx.)", "3 yr / unlimited km", "5 yr / 50,000 km (std, higher variants)", "Yes - optional, paid extended warranty plans via TVS Motor", "Extended vehicle/battery warranty packages (TVS Motor Care)", "Yes on S/ST variants (SmartXonnect turn-by-turn navigation, Alexa skillset on ST); limited/absent on base variant", "7-inch TFT touchscreen", "Yes", "Not officially listed as a standalone feature on most variants", "Not publicly disclosed", "82 km/h (top speed)", "IP67-rated battery pack (twin packs on higher variants)", "Reverse assist / park mode via SmartXonnect app on connected variants", "90/90-12", "90/90-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes - Distance to Empty shown via SmartXonnect/dashboard", "TVS Motor Care warranty is generally linked to the vehicle and transferable on ownership change, subject to TVS policy - confirm with dealer", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; some forum/owner complaints of battery failure before warranty expiry and chassis/BMS issues reported by a subset of users", "~125 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "A vocal minority reports sudden stoppages mid-ride, premature battery failure, and slow/unresponsive customer service; others report low complaint, smooth ownership - experience varies notably by service centre", "Not publicly disclosed", "₹1.55L - ₹1.72L", "tvsmotor.com; bikewale.com; autocarindia.com; bikedekho.com"], ["TVS", "iQube", "iQube ST 5.3 kWh (top)", "5.3 kWh", "212 km IDC claimed / ~135-150 km real-world (est.)", "Yes - regenerative braking (multi-mode)", "157 mm (ST variant, brand-cited)", "Yes (front disc, standard/optional depending on variant)", "Drum with CBS (rear)", "Telescopic", "Hydraulic twin-tube shock absorber", "BLDC hub motor", "4.4 kW peak, 33 Nm torque", "NMC Li-ion (IP67 sealed pack)", "32 litres underseat (ST); slightly less on base variants (exact not disclosed)", "4 hr 30 min (0-80%) with 950W portable charger", "No DC fast charge; standard portable charger only (higher-wattage charger on higher variants)", "Portable plug-and-play charger (15A socket)", "650-950 W depending on variant", "Eco, Power/City, (Sport on ST)", "Eco mode yields closer to claimed IDC range; Power/Sport mode reduces range by ~20-30% (approx.)", "3 yr / unlimited km", "5 yr / 50,000 km (std)", "Yes - optional, paid extended warranty plans via TVS Motor", "Extended vehicle/battery warranty packages (TVS Motor Care)", "Yes on S/ST variants (SmartXonnect turn-by-turn navigation, Alexa skillset on ST); limited/absent on base variant", "7-inch TFT touchscreen, voice assist/Alexa", "Yes", "Not officially listed as a standalone feature on most variants", "Not publicly disclosed", "82 km/h (top speed)", "IP67-rated battery pack (twin packs on higher variants)", "Reverse assist / park mode via SmartXonnect app on connected variants", "90/90-12", "90/90-12", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Yes - Distance to Empty shown via SmartXonnect/dashboard", "TVS Motor Care warranty is generally linked to the vehicle and transferable on ownership change, subject to TVS policy - confirm with dealer", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; some forum/owner complaints of battery failure before warranty expiry and chassis/BMS issues reported by a subset of users", "128.8 kg", "Not publicly disclosed", "Not publicly disclosed", "A vocal minority reports sudden stoppages mid-ride, premature battery failure, and slow/unresponsive customer service; others report low complaint, smooth ownership - experience varies notably by service centre", "Not publicly disclosed", "₹1.65L - ₹1.85L", "tvsmotor.com; bikewale.com; autocarindia.com; bikedekho.com"], ["TVS", "Orbiter", "Orbiter V2 (3.1 kWh)", "3.1 kWh", "158 km IDC claimed / ~110-115 km real-world (tested ~112 km city mode)", "Not prominently marketed as a feature; two-way throttle deceleration only (unconfirmed regen braking)", "Not publicly disclosed", "No (drum brake only - no disc brake variant currently offered)", "Drum", "Telescopic (front, single-sided/leading link on some reports)", "Twin shock / monoshock (not fully verified)", "BLDC hub motor", "2.8 kW peak (approx., same platform as V1)", "Li-ion (NMC)", "34 litres underseat (best-in-class for the segment, fits helmet + bag)", "4 hr 10 min (0-80%)", "No fast charging; standard charger only", "Portable plug-in charger", "Not publicly disclosed", "Eco, City (2 modes) + dedicated Parking mode for low-speed manoeuvres", "City mode gives full claimed range; Eco extends it further (exact split not disclosed)", "3 yr / unlimited km (typical TVS coverage; confirm exact terms with dealer)", "3 yr / 30,000 km (std, typical)", "Yes - optional, paid extended warranty via TVS Motor Care", "Extended vehicle/battery warranty packages", "Yes - via SmartXonnect app (Bluetooth-connected LCD)", "Colour LCD display", "No", "Yes - cruise control included as standard", "Not publicly disclosed", "68 km/h (same top speed for V1 & V2)", "Not publicly disclosed (IP rating not confirmed)", "Yes - dedicated Parking mode for tight manoeuvres", "14-inch wheel (tyre size not separately specified)", "12-inch wheel (tyre size not separately specified)", "Tubeless (typical for segment; not independently confirmed)", "Yes - hill-hold control included as standard", "Not publicly disclosed", "Likely available on LCD (not explicitly confirmed)", "Warranty terms not explicitly published for transferability - confirm with TVS dealer", "No dedicated 'holiday mode' publicly listed", "No specific reports found this session", "101 kg", "Not publicly disclosed", "Not publicly disclosed", "Slow charging time relative to battery size (4+ hrs); no disc brake option; being a new/budget model, fewer long-term ownership reviews are available yet", "Not publicly disclosed", "₹95,550 - ₹1.17L (V2 ex-showroom ~₹99,900-1.09L + RTO/insurance; V1 lower)", "tvsmotor.com; autocarindia.com; bikewale.com; bikedekho.com; 91wheels.com"], ["Hero Vida", "VX2 (formerly V2)", "VX2 Go 2.2 kWh (V2X Go)", "2.2 kWh", "93 km IDC claimed / ~65-70 km real-world (est.)", "Yes - regenerative braking, activates on deceleration; can also be triggered manually via reverse-twist throttle", "Not publicly disclosed", "Yes (front disc, typical for segment)", "Drum (typical; disc on some higher trims - not fully confirmed)", "Telescopic", "Monoshock (typical for segment; not independently re-verified this session)", "Hub-mounted BLDC/PMSM motor (removable-battery platform)", "Not fully disclosed per variant (~3.9 kW class motor reported for V2)", "NMC Li-ion, removable pack(s)", "Not publicly disclosed (moderate underseat space; smaller than Rizta/Indie due to removable battery bay)", "Not disclosed (portable charger, single battery)", "Yes on select variants - DC fast charging replenishes 0-80% in ~62-65 minutes at Vida fast-charging stations", "Removable battery + portable charger (charge indoors/office); DC fast charging at public Vida stations for compatible variants", "1 kW portable charger (dual-battery variants)", "2 ride modes (approx.)", "Higher modes reduce range by an estimated 15-25% vs Eco (exact split not disclosed)", "3 yr / unlimited km (typical; confirm variant-specific terms)", "3 yr / 30,000 km (std; 5 yr/60,000 km extended plans available)", "Yes - optional, paid", "Extended warranty, buyback and charging plans (Vida Care programs)", "Available via connected app on Plus/Pro-tier variants (exact per-variant availability not fully confirmed)", "7-inch TFT screen (all variants)", "Not explicitly confirmed as touchscreen on all variants", "Available on higher-tier (Plus/Pro) variants; not confirmed on Go/Lite", "Not publicly disclosed", "70 km/h (top speed)", "Not publicly disclosed (removable battery packs, IP rating not confirmed)", "Reverse mode present; dedicated parking assist not explicitly confirmed", "Not publicly disclosed", "Not publicly disclosed", "Tubeless (typical; not independently confirmed)", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT display", "Vida warranty is notably marketed as transferable to the next owner, which can improve resale value", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; being a removable-battery design, deep discharge is less of a parking-related risk, but no independent long-term data found this session", "~110-124 kg depending on variant (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Some owners report rear-end wobble at speed, software/UI glitches, and inconsistent service quality; removable battery weight/handling cited as a minor ergonomic concern by a few reviewers", "Not publicly disclosed", "₹96,000 - ₹1.05L", "vidaworld.com; bikedekho.com; 91wheels.com; bikewale.com; autopunditz.com"], ["Hero Vida", "VX2 (formerly V2)", "VX2 Go 3.4 kWh (V2X Go)", "3.4 kWh", "146 km IDC claimed / ~100-105 km real-world (est.)", "Yes - regenerative braking, activates on deceleration; can also be triggered manually via reverse-twist throttle", "Not publicly disclosed", "Yes (front disc, typical for segment)", "Drum (typical; disc on some higher trims - not fully confirmed)", "Telescopic", "Monoshock (typical for segment; not independently re-verified this session)", "Hub-mounted BLDC/PMSM motor (removable-battery platform)", "Not fully disclosed per variant (~3.9 kW class motor reported for V2)", "NMC Li-ion, removable pack(s)", "Not publicly disclosed (moderate underseat space; smaller than Rizta/Indie due to removable battery bay)", "Not disclosed (portable charger)", "Yes on select variants - DC fast charging replenishes 0-80% in ~62-65 minutes at Vida fast-charging stations", "Removable battery + portable charger (charge indoors/office); DC fast charging at public Vida stations for compatible variants", "1 kW portable charger (dual-battery variants)", "2-3 ride modes (approx.)", "Higher modes reduce range by an estimated 15-25% vs Eco (exact split not disclosed)", "3 yr / unlimited km (typical; confirm variant-specific terms)", "3 yr / 30,000 km (std; 5 yr/60,000 km extended plans available)", "Yes - optional, paid", "Extended warranty, buyback and charging plans (Vida Care programs)", "Available via connected app on Plus/Pro-tier variants (exact per-variant availability not fully confirmed)", "7-inch TFT screen (all variants)", "Not explicitly confirmed as touchscreen on all variants", "Available on higher-tier (Plus/Pro) variants; not confirmed on Go/Lite", "Not publicly disclosed", "70 km/h (top speed)", "Not publicly disclosed (removable battery packs, IP rating not confirmed)", "Reverse mode present; dedicated parking assist not explicitly confirmed", "Not publicly disclosed", "Not publicly disclosed", "Tubeless (typical; not independently confirmed)", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT display", "Vida warranty is notably marketed as transferable to the next owner, which can improve resale value", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; being a removable-battery design, deep discharge is less of a parking-related risk, but no independent long-term data found this session", "~110-124 kg depending on variant (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Some owners report rear-end wobble at speed, software/UI glitches, and inconsistent service quality; removable battery weight/handling cited as a minor ergonomic concern by a few reviewers", "Not publicly disclosed", "₹1.05L - ₹1.20L", "vidaworld.com; bikedekho.com; 91wheels.com; bikewale.com; autopunditz.com"], ["Hero Vida", "VX2 (formerly V2)", "VX2 Plus 3.4 kWh (V2X)", "3.4 kWh (removable)", "146 km IDC claimed / ~100-110 km real-world (est.)", "Yes - regenerative braking, activates on deceleration; can also be triggered manually via reverse-twist throttle", "Not publicly disclosed", "Yes (front disc, typical for segment)", "Drum (typical; disc on some higher trims - not fully confirmed)", "Telescopic", "Monoshock (typical for segment; not independently re-verified this session)", "Hub-mounted BLDC/PMSM motor (removable-battery platform)", "Not fully disclosed per variant (~3.9 kW class motor reported for V2)", "NMC Li-ion, removable pack(s)", "Not publicly disclosed (moderate underseat space; smaller than Rizta/Indie due to removable battery bay)", "5 hr 15 min (0-80%, single battery, approx.)", "Yes on select variants - DC fast charging replenishes 0-80% in ~62-65 minutes at Vida fast-charging stations", "Removable battery + portable charger (charge indoors/office); DC fast charging at public Vida stations for compatible variants", "1 kW portable charger (dual-battery variants)", "3 ride modes + Boost", "Higher modes reduce range by an estimated 15-25% vs Eco (exact split not disclosed)", "3 yr / unlimited km (typical; confirm variant-specific terms)", "3 yr / 30,000 km (std; 5 yr/60,000 km extended plans available)", "Yes - optional, paid", "Extended warranty, buyback and charging plans (Vida Care programs)", "Available via connected app on Plus/Pro-tier variants (exact per-variant availability not fully confirmed)", "7-inch TFT screen (all variants)", "Not explicitly confirmed as touchscreen on all variants", "Available on higher-tier (Plus/Pro) variants; not confirmed on Go/Lite", "Not publicly disclosed", "80 km/h (top speed)", "Not publicly disclosed (removable battery packs, IP rating not confirmed)", "Reverse mode present; dedicated parking assist not explicitly confirmed", "Not publicly disclosed", "Not publicly disclosed", "Tubeless (typical; not independently confirmed)", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT display", "Vida warranty is notably marketed as transferable to the next owner, which can improve resale value", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; being a removable-battery design, deep discharge is less of a parking-related risk, but no independent long-term data found this session", "~110-124 kg depending on variant (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Some owners report rear-end wobble at speed, software/UI glitches, and inconsistent service quality; removable battery weight/handling cited as a minor ergonomic concern by a few reviewers", "Not publicly disclosed", "₹1.15L - ₹1.32L", "vidaworld.com; bikedekho.com; 91wheels.com; bikewale.com; autopunditz.com"], ["Hero Vida", "VX2 (formerly V2)", "VX2 Plus 4.4 kWh (V2X, top/flagship, dual removable batteries)", "4.4 kWh (2x2.2 kWh removable)", "187 km IDC claimed / ~130-140 km real-world (est.)", "Yes - regenerative braking, activates on deceleration; can also be triggered manually via reverse-twist throttle", "Not publicly disclosed", "Yes (front disc, typical for segment)", "Drum (typical; disc on some higher trims - not fully confirmed)", "Telescopic", "Monoshock (typical for segment; not independently re-verified this session)", "Hub-mounted BLDC/PMSM motor (removable-battery platform)", "Not fully disclosed per variant (~3.9 kW class motor reported for V2)", "NMC Li-ion, removable pack(s)", "Not publicly disclosed (moderate underseat space; smaller than Rizta/Indie due to removable battery bay)", "3 hr 17 min (0-80%) with 1kW charger / 5 hr 8 min full; DC fast charge 0-80% in ~65 min", "Yes on select variants - DC fast charging replenishes 0-80% in ~62-65 minutes at Vida fast-charging stations", "Removable battery + portable charger (charge indoors/office); DC fast charging at public Vida stations for compatible variants", "1 kW portable charger (dual-battery variants)", "4 ride modes + Boost", "Higher modes reduce range by an estimated 15-25% vs Eco (exact split not disclosed)", "3 yr / unlimited km (typical; confirm variant-specific terms)", "3 yr / 30,000 km (std; 5 yr/60,000 km extended plans available)", "Yes - optional, paid", "Extended warranty, buyback and charging plans (Vida Care programs)", "Available via connected app on Plus/Pro-tier variants (exact per-variant availability not fully confirmed)", "7-inch TFT screen (all variants)", "Not explicitly confirmed as touchscreen on all variants", "Available on higher-tier (Plus/Pro) variants; not confirmed on Go/Lite", "Not publicly disclosed", "90 km/h (top speed)", "Not publicly disclosed (removable battery packs, IP rating not confirmed)", "Reverse mode present; dedicated parking assist not explicitly confirmed", "Not publicly disclosed", "Not publicly disclosed", "Tubeless (typical; not independently confirmed)", "Not publicly disclosed", "Not publicly disclosed", "Yes, shown on TFT display", "Vida warranty is notably marketed as transferable to the next owner, which can improve resale value", "No dedicated 'holiday mode' publicly listed", "Not officially acknowledged; being a removable-battery design, deep discharge is less of a parking-related risk, but no independent long-term data found this session", "~110-124 kg depending on variant (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Some owners report rear-end wobble at speed, software/UI glitches, and inconsistent service quality; removable battery weight/handling cited as a minor ergonomic concern by a few reviewers", "Not publicly disclosed", "₹1.35L - ₹1.50L (₹1,43,990 effective ex-showroom Delhi, Jul 2026)", "vidaworld.com; bikedekho.com; 91wheels.com; bikewale.com; autopunditz.com"], ["Bajaj", "Chetak (Series 25)", "Chetak C2501 (Series 25)", "2.5 kWh", "113 km IDC claimed / ~80-90 km real-world (est.)", "Yes - regenerative braking (multi-mode on 35 series)", "Not publicly disclosed", "Yes (front disc)", "Drum", "Single-sided leading-link front suspension", "Monoshock (rear)", "Hub-mounted BLDC/PMSM-type motor (Bajaj proprietary)", "3 kW motor", "Li-ion (metal-cased, IP67)", "25 litres", "Not disclosed (approx. 5 hrs full on standard charger)", "No DC fast charging on any current Chetak variant; portable/onboard charger only", "Onboard/portable charger via standard 5A/15A household socket", "Not publicly disclosed", "Eco, City (approx. 2 modes)", "Sport/City modes reduce range by an estimated 15-20% vs Eco (exact split not disclosed)", "3 yr / 50,000 km", "3 yr / 50,000 km (std; claimed 7 yr/70,000 km life if maintained per Bajaj's guidance)", "Yes - optional, paid Extended Warranty / Service Contract", "Extended Warranty (Protection Plan) covering repair/replacement beyond standard 3yr/50,000km; annual roadside assistance also purchasable", "Available on 35 Series (touchscreen, full app connect); limited/absent on 25/30 Series", "LCD display", "No", "Not publicly disclosed", "Not publicly disclosed", "60 km/h (top speed)", "IP67-rated metal-cased battery pack", "Reverse mode (Tech Pack-equipped variants)", "90/90-12", "90/90-12", "Tubeless", "Yes on 35 Series (Tech Pack); optional/no on 30 Series; No on 25 Series", "Not publicly disclosed", "Yes, shown on display", "Bajaj/Chetak warranty administered at the company's discretion; transferability not explicitly published - confirm with Chetak service centre", "No dedicated 'holiday mode' publicly listed", "Not an officially named issue, but Chetak explicitly advises keeping the battery above 15% charge and using it regularly to preserve claimed 7-year/70,000km battery life, implying deep-discharge/long-idle risk is a real concern flagged by the brand itself", "~85-113 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Sudden mid-ride stoppages and BMS/range-loss issues reported by a subset of owners, especially on older units; slow service turnaround (parts availability) reported by some; auxiliary battery (18-month warranty) and tyres (12-month warranty) are separately, more narrowly covered", "Not publicly disclosed", "₹1.00L - ₹1.10L", "chetak.com; bikedekho.com; 91wheels.com; bikewale.com; ev.care"], ["Bajaj", "Chetak (Series 30)", "Chetak C3001 / Premium (Series 30)", "3.0 kWh", "131 km IDC claimed / ~90-100 km real-world (est.)", "Yes - regenerative braking (multi-mode on 35 series)", "Not publicly disclosed", "Drum (no disc on base 3001; check trim)", "Drum", "Single-sided leading-link front suspension", "Monoshock (rear)", "Hub-mounted BLDC/PMSM-type motor (Bajaj proprietary)", "3.1 kW motor", "Li-ion (metal-cased, IP67)", "35 litres", "Not disclosed", "No DC fast charging on any current Chetak variant; portable/onboard charger only", "Onboard/portable charger via standard 5A/15A household socket", "Not publicly disclosed", "Eco, City (approx. 2-3 modes)", "Sport/City modes reduce range by an estimated 15-20% vs Eco (exact split not disclosed)", "3 yr / 50,000 km", "3 yr / 50,000 km (std; claimed 7 yr/70,000 km life if maintained per Bajaj's guidance)", "Yes - optional, paid Extended Warranty / Service Contract", "Extended Warranty (Protection Plan) covering repair/replacement beyond standard 3yr/50,000km; annual roadside assistance also purchasable", "Available on 35 Series (touchscreen, full app connect); limited/absent on 25/30 Series", "Colour LCD", "No", "Not publicly disclosed", "Not publicly disclosed", "70 km/h (top speed)", "IP67-rated metal-cased battery pack", "Reverse mode (Tech Pack-equipped variants)", "90/90-12", "90/90-12", "Tubeless", "Yes on 35 Series (Tech Pack); optional/no on 30 Series; No on 25 Series", "Not publicly disclosed", "Yes, shown on display", "Bajaj/Chetak warranty administered at the company's discretion; transferability not explicitly published - confirm with Chetak service centre", "No dedicated 'holiday mode' publicly listed", "Not an officially named issue, but Chetak explicitly advises keeping the battery above 15% charge and using it regularly to preserve claimed 7-year/70,000km battery life, implying deep-discharge/long-idle risk is a real concern flagged by the brand itself", "~90-95 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Sudden mid-ride stoppages and BMS/range-loss issues reported by a subset of owners, especially on older units; slow service turnaround (parts availability) reported by some; auxiliary battery (18-month warranty) and tyres (12-month warranty) are separately, more narrowly covered", "Not publicly disclosed", "₹1.02L - ₹1.15L", "chetak.com; bikedekho.com; 91wheels.com; bikewale.com; ev.care"], ["Bajaj", "Chetak (Series 35)", "Chetak C3501 (Series 35)", "3.5 kWh", "153 km IDC claimed / ~105-115 km real-world (est.)", "Yes - regenerative braking (multi-mode on 35 series)", "Not publicly disclosed", "Yes (front disc)", "Drum", "Single-sided leading-link front suspension", "Monoshock (rear)", "Hub-mounted BLDC/PMSM-type motor (Bajaj proprietary)", "4 kW motor", "Li-ion (metal-cased, IP67)", "35 litres", "3 hr 25 min (0-80%) / +1 hr 35 min to full", "No DC fast charging on any current Chetak variant; portable/onboard charger only", "Onboard/portable charger via standard 5A/15A household socket", "Not publicly disclosed", "Eco, City, Sport (approx. 3 modes)", "Sport/City modes reduce range by an estimated 15-20% vs Eco (exact split not disclosed)", "3 yr / 50,000 km", "3 yr / 50,000 km (std; claimed 7 yr/70,000 km life if maintained per Bajaj's guidance)", "Yes - optional, paid Extended Warranty / Service Contract", "Extended Warranty (Protection Plan) covering repair/replacement beyond standard 3yr/50,000km; annual roadside assistance also purchasable", "Available on 35 Series (touchscreen, full app connect); limited/absent on 25/30 Series", "5-inch Touch TFT", "Yes", "Not publicly disclosed", "Not publicly disclosed", "80 km/h (top speed)", "IP67-rated metal-cased battery pack", "Reverse mode (Tech Pack-equipped variants)", "90/90-12", "90/90-12", "Tubeless", "Yes on 35 Series (Tech Pack); optional/no on 30 Series; No on 25 Series", "Not publicly disclosed", "Yes, shown on display", "Bajaj/Chetak warranty administered at the company's discretion; transferability not explicitly published - confirm with Chetak service centre", "No dedicated 'holiday mode' publicly listed", "Not an officially named issue, but Chetak explicitly advises keeping the battery above 15% charge and using it regularly to preserve claimed 7-year/70,000km battery life, implying deep-discharge/long-idle risk is a real concern flagged by the brand itself", "~95-100 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Sudden mid-ride stoppages and BMS/range-loss issues reported by a subset of owners, especially on older units; slow service turnaround (parts availability) reported by some; auxiliary battery (18-month warranty) and tyres (12-month warranty) are separately, more narrowly covered", "Not publicly disclosed", "₹1.25L - ₹1.38L", "chetak.com; bikedekho.com; 91wheels.com; bikewale.com; ev.care"], ["Bajaj", "Chetak (Series 35)", "Chetak C3502 (Series 35)", "3.5 kWh", "153 km IDC claimed / ~105-115 km real-world (est.)", "Yes - regenerative braking (multi-mode on 35 series)", "Not publicly disclosed", "Yes (front disc)", "Drum", "Single-sided leading-link front suspension", "Monoshock (rear)", "Hub-mounted BLDC/PMSM-type motor (Bajaj proprietary)", "4 kW motor", "Li-ion (metal-cased, IP67)", "35 litres", "3 hr 25 min (0-80%) / +1 hr 35 min to full", "No DC fast charging on any current Chetak variant; portable/onboard charger only", "Onboard/portable charger via standard 5A/15A household socket", "Not publicly disclosed", "Eco, City, Sport (approx. 3 modes)", "Sport/City modes reduce range by an estimated 15-20% vs Eco (exact split not disclosed)", "3 yr / 50,000 km", "3 yr / 50,000 km (std; claimed 7 yr/70,000 km life if maintained per Bajaj's guidance)", "Yes - optional, paid Extended Warranty / Service Contract", "Extended Warranty (Protection Plan) covering repair/replacement beyond standard 3yr/50,000km; annual roadside assistance also purchasable", "Available on 35 Series (touchscreen, full app connect); limited/absent on 25/30 Series", "TFT (non-touch or touch depending on exact trim)", "Not fully confirmed", "Not publicly disclosed", "Not publicly disclosed", "80 km/h (top speed)", "IP67-rated metal-cased battery pack", "Reverse mode (Tech Pack-equipped variants)", "90/90-12", "90/90-12", "Tubeless", "Yes on 35 Series (Tech Pack); optional/no on 30 Series; No on 25 Series", "Not publicly disclosed", "Yes, shown on display", "Bajaj/Chetak warranty administered at the company's discretion; transferability not explicitly published - confirm with Chetak service centre", "No dedicated 'holiday mode' publicly listed", "Not an officially named issue, but Chetak explicitly advises keeping the battery above 15% charge and using it regularly to preserve claimed 7-year/70,000km battery life, implying deep-discharge/long-idle risk is a real concern flagged by the brand itself", "~95-100 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Sudden mid-ride stoppages and BMS/range-loss issues reported by a subset of owners, especially on older units; slow service turnaround (parts availability) reported by some; auxiliary battery (18-month warranty) and tyres (12-month warranty) are separately, more narrowly covered", "Not publicly disclosed", "₹1.30L - ₹1.40L", "chetak.com; bikedekho.com; 91wheels.com; bikewale.com; ev.care"], ["Bajaj", "Chetak (Series 35)", "Chetak C3503 (Series 35, top)", "3.5 kWh", "153 km IDC claimed / ~105-115 km real-world (est.)", "Yes - regenerative braking (multi-mode on 35 series)", "Not publicly disclosed", "Yes (front disc)", "Drum", "Single-sided leading-link front suspension", "Monoshock (rear)", "Hub-mounted BLDC/PMSM-type motor (Bajaj proprietary)", "4 kW motor", "Li-ion (metal-cased, IP67)", "35 litres", "3 hr 25 min (0-80%) / +1 hr 35 min to full", "No DC fast charging on any current Chetak variant; portable/onboard charger only", "Onboard/portable charger via standard 5A/15A household socket", "Not publicly disclosed", "Eco, City, Sport (approx. 3 modes)", "Sport/City modes reduce range by an estimated 15-20% vs Eco (exact split not disclosed)", "3 yr / 50,000 km", "3 yr / 50,000 km (std; claimed 7 yr/70,000 km life if maintained per Bajaj's guidance)", "Yes - optional, paid Extended Warranty / Service Contract", "Extended Warranty (Protection Plan) covering repair/replacement beyond standard 3yr/50,000km; annual roadside assistance also purchasable", "Available on 35 Series (touchscreen, full app connect); limited/absent on 25/30 Series", "5-inch Touch TFT", "Yes", "Not publicly disclosed", "Not publicly disclosed", "80 km/h (top speed)", "IP67-rated metal-cased battery pack", "Reverse mode (Tech Pack-equipped variants)", "90/90-12", "90/90-12", "Tubeless", "Yes on 35 Series (Tech Pack); optional/no on 30 Series; No on 25 Series", "Not publicly disclosed", "Yes, shown on display", "Bajaj/Chetak warranty administered at the company's discretion; transferability not explicitly published - confirm with Chetak service centre", "No dedicated 'holiday mode' publicly listed", "Not an officially named issue, but Chetak explicitly advises keeping the battery above 15% charge and using it regularly to preserve claimed 7-year/70,000km battery life, implying deep-discharge/long-idle risk is a real concern flagged by the brand itself", "~95-100 kg (approx.)", "Not publicly disclosed", "Not publicly disclosed", "Sudden mid-ride stoppages and BMS/range-loss issues reported by a subset of owners, especially on older units; slow service turnaround (parts availability) reported by some; auxiliary battery (18-month warranty) and tyres (12-month warranty) are separately, more narrowly covered", "Not publicly disclosed", "₹1.35L - ₹1.48L (~₹1,24,785 ex-showroom cited)", "chetak.com; bikedekho.com; 91wheels.com; bikewale.com; ev.care"], ["River", "Indie", "Indie Standard (4 kWh)", "4 kWh", "161 km IDC claimed / ~120-160 km real-world (owner-reported, varies widely)", "Yes - regenerative braking available", "165 mm (high ground clearance, a key differentiator)", "Yes (front disc)", "Yes (rear disc)", "Telescopic (front)", "Monoshock (rear, typical; not independently re-verified)", "Mid-mounted motor with chain drive (updated from belt drive, Nov 2024)", "8.9 bhp peak / 26 Nm torque (approx. 6.6-6.7 kW)", "Li-ion (NMC)", "Large underseat storage - marketed as segment-leading ('SUV of scooters'); exact litre figure not consistently published", "6 hrs full (approx.; 5 hrs cited by brand)", "No DC fast charging; standard charger only", "Portable plug-in charger", "Not publicly disclosed", "3 ride modes (exact names not confirmed - includes an eco and a performance/'Rush' mode per owner reviews)", "Eco mode ~161 km claimed; Rush/performance mode noticeably lower (exact split not disclosed)", "3 yr / unlimited km (typical; confirm exact terms with River)", "3 yr / 30,000 km (typical; confirm exact terms - not fully confirmed this session)", "Yes - optional extended plans reported to be available", "Extended vehicle/battery warranty (specific terms not fully confirmed this session)", "Not publicly confirmed", "Not publicly disclosed (digital display present)", "Not publicly disclosed", "Not publicly disclosed", "Not publicly disclosed", "90 km/h (top speed)", "Not publicly disclosed (marketed for all-weather/rugged use, high ground clearance)", "Not publicly disclosed", "14-inch alloy wheel", "14-inch alloy wheel", "Tubeless", "Not publicly disclosed", "Not publicly disclosed", "Likely available (not explicitly confirmed)", "Not publicly disclosed - confirm with River dealer", "No dedicated 'holiday mode' publicly listed", "No specific reports found this session", "143 kg", "Long, two-up seat (exact cm not published)", "Not publicly disclosed", "Headlight/DRL visibility rated only average by some owners; plasticky exterior panel feel reported; occasional rear-brake noise and front-suspension noise reported (fixed under service); front suspension can feel stiff for a solo rider; currently sold only in Bengaluru & Hyderabad, limiting service-network reach", "Not publicly disclosed", "₹1.52L - ₹1.63L (ex-showroom ~₹1.42-1.55L + RTO/insurance)", "riverindie.com (brand); bikedekho.com; bikewale.com; 91wheels.com; thebikejunction.com"]]};
+const COLS = DATASET.columns;
+const ROWS = DATASET.rows;
+
+// index lookups
+const IDX = {
+  brand:0, model:1, variant:2, battery:3, range:4, regen:5, gc:6, discF:7, discR:8,
+  suspF:9, suspR:10, motorType:11, motorCap:12, battType:13, storage:14, chargeTime:15,
+  fastCharge:16, chargerType:17, chargerCap:18, modes:19, modeRange:20, scooterWarr:21,
+  battWarr:22, addWarr:23, addWarrType:24, nav:25, display:26, touch:27, cruise:28,
+  grade:29, maxSpeed:30, water:31, parkAssist:32, tyreF:33, tyreR:34, tyreType:35,
+  hillHold:36, dims:37, dte:38, transfer:39, holiday:40, deepDischarge:41, kerb:42,
+  seatL:43, seatW:44, complaints:45, maxLoad:46, price:47, sources:48
+};
+
+const BRAND_COLORS = {
+  "Ather": "#0E8C82",
+  "TVS": "#3866C9",
+  "Hero Vida": "#7B5AD1",
+  "Bajaj": "#E0673A",
+  "River": "#5C8A3A"
+};
+
+function obj(row){
+  const o = {};
+  Object.keys(IDX).forEach(k => o[k] = row[IDX[k]]);
+  return o;
+}
+const ITEMS = ROWS.map((r,i) => ({...obj(r), _id:i}));
+
+function firstNum(str){
+  if(!str) return null;
+  const m = String(str).match(/[\d,]+(\.\d+)?/);
+  return m ? parseFloat(m[0].replace(/,/g,'')) : null;
+}
+function priceLakhs(str){
+  if(!str) return null;
+  const m = String(str).match(/₹\s*([\d.]+)\s*L/);
+  return m ? parseFloat(m[1]) : firstNum(str);
+}
+
+ITEMS.forEach(it=>{
+  it._rangeKm = firstNum(it.range);
+  it._priceL = priceLakhs(it.price);
+  it._speed = firstNum(it.maxSpeed);
+  it._battKwh = firstNum(it.battery);
+  it._color = BRAND_COLORS[it.brand] || "#54697C";
+  it._chem = /LFP/i.test(it.battType) ? 'LFP' : 'NMC';
+  const hasP = /PMSM/i.test(it.motorType), hasB = /BLDC/i.test(it.motorType);
+  it._motorFam = hasP && hasB ? 'BLDC/PMSM' : hasP ? 'PMSM' : hasB ? 'BLDC' : 'Other';
+  it._ip67 = /IP6\d/.test(it.water);
+  it._kerbKg = firstNum(it.kerb);
+});
+
+// ---------------- YES/NO ICON ----------------
+function ynIcon(val){
+  if(val==null) return val;
+  const s = String(val).trim();
+  const isYes = /^yes\b/i.test(s);
+  const isNo = /^no\b/i.test(s);
+  if(!isYes && !isNo) return s;
+  const rest = s.replace(/^(yes|no)\b[,:\-–]?\s*/i,'');
+  const icon = isYes
+    ? '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>'
+    : '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l10 10M15 5L5 15"/></svg>';
+  return `<span class="yn ${isYes?'yes':'no'}">${icon}<span>${isYes?'Yes':'No'}${rest? ' — '+rest : ''}</span></span>`;
+}
+
+// ---------------- LEGEND & BRAND TOGGLES ----------------
+const brands = [...new Set(ITEMS.map(i=>i.brand))];
+const legendEl = document.getElementById('legend');
+const brandToggleEl = document.getElementById('brandToggles');
+let activeBrands = new Set(brands);
+
+brands.forEach(b=>{
+  const c = BRAND_COLORS[b] || "#54697C";
+  const chip = document.createElement('span');
+  chip.className='chip';
+  chip.innerHTML = `<span class="dot" style="background:${c}"></span>${b}`;
+  legendEl.appendChild(chip);
+
+  const btn = document.createElement('button');
+  btn.className='brand-toggle active';
+  btn.style.background = c; btn.style.borderColor = c;
+  btn.textContent = b;
+  btn.dataset.brand = b;
+  btn.addEventListener('click', ()=>{
+    if(activeBrands.has(b)){
+      activeBrands.delete(b);
+      btn.classList.remove('active');
+      btn.style.background='transparent'; btn.style.color = c;
+    } else {
+      activeBrands.add(b);
+      btn.classList.add('active');
+      btn.style.background=c; btn.style.color='#fff';
+    }
+    render();
+  });
+  brandToggleEl.appendChild(btn);
+});
+
+// ---------------- FILTERS PANEL ----------------
+const priceValsAll = ITEMS.map(i=>i._priceL).filter(v=>v!=null);
+const rangeValsAll = ITEMS.map(i=>i._rangeKm).filter(v=>v!=null);
+const PRICE_MIN = Math.floor(Math.min(...priceValsAll)*10)/10;
+const PRICE_MAX = Math.ceil(Math.max(...priceValsAll)*10)/10;
+const RANGE_MIN = Math.floor(Math.min(...rangeValsAll)/5)*5;
+const RANGE_MAX = Math.ceil(Math.max(...rangeValsAll)/5)*5;
+
+const filterState = {
+  priceMin: PRICE_MIN, priceMax: PRICE_MAX,
+  rangeMin: RANGE_MIN, rangeMax: RANGE_MAX,
+  chems: new Set(['LFP','NMC']),
+  motors: new Set(['PMSM','BLDC','BLDC/PMSM','Other']),
+  ip67Only: false
+};
+
+const filtersToggle = document.getElementById('filtersToggle');
+const filtersPanel = document.getElementById('filtersPanel');
+filtersToggle.addEventListener('click', ()=>{
+  const open = filtersPanel.classList.toggle('open');
+  filtersToggle.classList.toggle('active', open);
+  filtersToggle.textContent = open ? 'Filters ▴' : 'Filters ▾';
+});
+
+const priceMinSlider = document.getElementById('priceMinSlider');
+const priceMaxSlider = document.getElementById('priceMaxSlider');
+const rangeMinSlider = document.getElementById('rangeMinSlider');
+const rangeMaxSlider = document.getElementById('rangeMaxSlider');
+[priceMinSlider,priceMaxSlider].forEach(s=>{ s.min=PRICE_MIN; s.max=PRICE_MAX; s.step=0.05; });
+priceMinSlider.value = PRICE_MIN; priceMaxSlider.value = PRICE_MAX;
+[rangeMinSlider,rangeMaxSlider].forEach(s=>{ s.min=RANGE_MIN; s.max=RANGE_MAX; s.step=5; });
+rangeMinSlider.value = RANGE_MIN; rangeMaxSlider.value = RANGE_MAX;
+
+function syncSliderLabels(){
+  document.getElementById('priceMinLbl').textContent = '₹'+filterState.priceMin.toFixed(2)+'L';
+  document.getElementById('priceMaxLbl').textContent = '₹'+filterState.priceMax.toFixed(2)+'L';
+  document.getElementById('rangeMinLbl').textContent = filterState.rangeMin+' km';
+  document.getElementById('rangeMaxLbl').textContent = filterState.rangeMax+' km';
+}
+function onPriceSlider(){
+  let mn = parseFloat(priceMinSlider.value), mx = parseFloat(priceMaxSlider.value);
+  if(mn>mx){ [mn,mx]=[mx,mn]; }
+  filterState.priceMin = mn; filterState.priceMax = mx;
+  syncSliderLabels(); render();
+}
+function onRangeSlider(){
+  let mn = parseFloat(rangeMinSlider.value), mx = parseFloat(rangeMaxSlider.value);
+  if(mn>mx){ [mn,mx]=[mx,mn]; }
+  filterState.rangeMin = mn; filterState.rangeMax = mx;
+  syncSliderLabels(); render();
+}
+[priceMinSlider,priceMaxSlider].forEach(s=>s.addEventListener('input', onPriceSlider));
+[rangeMinSlider,rangeMaxSlider].forEach(s=>s.addEventListener('input', onRangeSlider));
+
+function buildChipGroup(containerId, values, activeSet){
+  const el = document.getElementById(containerId);
+  values.forEach(v=>{
+    const chip = document.createElement('span');
+    chip.className = 'filter-chip active';
+    chip.textContent = v;
+    chip.addEventListener('click', ()=>{
+      if(activeSet.has(v)){ activeSet.delete(v); chip.classList.remove('active'); }
+      else { activeSet.add(v); chip.classList.add('active'); }
+      render();
+    });
+    el.appendChild(chip);
+  });
+}
+buildChipGroup('chemChips', ['LFP','NMC'], filterState.chems);
+buildChipGroup('motorChips', ['PMSM','BLDC','BLDC/PMSM','Other'], filterState.motors);
+
+const ipChip = document.createElement('span');
+ipChip.className = 'filter-chip';
+ipChip.textContent = 'IP67-rated only';
+ipChip.addEventListener('click', ()=>{
+  filterState.ip67Only = !filterState.ip67Only;
+  ipChip.classList.toggle('active', filterState.ip67Only);
+  render();
+});
+document.getElementById('ipChips').appendChild(ipChip);
+
+document.getElementById('resetFilters').addEventListener('click', ()=>{
+  filterState.priceMin=PRICE_MIN; filterState.priceMax=PRICE_MAX;
+  filterState.rangeMin=RANGE_MIN; filterState.rangeMax=RANGE_MAX;
+  filterState.chems = new Set(['LFP','NMC']);
+  filterState.motors = new Set(['PMSM','BLDC','BLDC/PMSM','Other']);
+  filterState.ip67Only = false;
+  priceMinSlider.value=PRICE_MIN; priceMaxSlider.value=PRICE_MAX;
+  rangeMinSlider.value=RANGE_MIN; rangeMaxSlider.value=RANGE_MAX;
+  document.querySelectorAll('#chemChips .filter-chip, #motorChips .filter-chip').forEach(c=>c.classList.add('active'));
+  ipChip.classList.remove('active');
+  syncSliderLabels();
+  render();
+});
+
+syncSliderLabels();
+
+// ---------------- GAUGE ----------------
+function gaugeSVG(value, max, color){
+  const pct = Math.max(0, Math.min(1, value / max));
+  const r = 26, cx = 30, cy = 30;
+  const startAngle = 200, endAngle = -20; // degrees, arc sweeps 220deg total
+  const totalSweep = 220;
+  const toRad = d => (d * Math.PI) / 180;
+  function pt(angleDeg){
+    const a = toRad(angleDeg);
+    return [cx + r*Math.cos(a), cy - r*Math.sin(a)];
+  }
+  const bgEnd = pt(startAngle - totalSweep);
+  const valAngle = startAngle - totalSweep*pct;
+  const valEnd = pt(valAngle);
+  const startPt = pt(startAngle);
+  const largeArcBg = totalSweep > 180 ? 1 : 0;
+  const largeArcVal = (totalSweep*pct) > 180 ? 1 : 0;
+  return `<svg viewBox="0 0 60 44">
+    <path d="M ${startPt[0]} ${startPt[1]} A ${r} ${r} 0 ${largeArcBg} 1 ${bgEnd[0]} ${bgEnd[1]}"
+      fill="none" stroke="#E3E9E7" stroke-width="5" stroke-linecap="round"/>
+    <path d="M ${startPt[0]} ${startPt[1]} A ${r} ${r} 0 ${largeArcVal} 1 ${valEnd[0]} ${valEnd[1]}"
+      fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"/>
+  </svg>`;
+}
+
+// ---------------- DETAIL GROUPS ----------------
+const DETAIL_GROUPS = [
+  ["Battery & Range", ["battery","range","modeRange","battType","dte"]],
+  ["Motor & Performance", ["motorType","motorCap","maxSpeed","grade","modes","regen"]],
+  ["Charging", ["chargeTime","fastCharge","chargerType","chargerCap"]],
+  ["Brakes & Suspension", ["discF","discR","suspF","suspR","tyreF","tyreR","tyreType"]],
+  ["Comfort & Ride Aids", ["hillHold","cruise","parkAssist","holiday","water","gc","storage"]],
+  ["Display & Tech", ["display","touch","nav"]],
+  ["Warranty & Ownership", ["scooterWarr","battWarr","addWarr","addWarrType","transfer"]],
+  ["Dimensions & Build", ["kerb","seatL","seatW","dims","maxLoad"]],
+  ["Owner-Reported Issues", ["deepDischarge","complaints"]],
+];
+const LABELS = {};
+Object.keys(IDX).forEach((k,i)=>{ LABELS[k]=COLS[IDX[k]]; });
+
+// ---------------- RENDER CARDS ----------------
+const grid = document.getElementById('grid');
+const countPill = document.getElementById('countPill');
+let selected = new Set();
+
+const bestRangeId = ITEMS.reduce((a,b)=> (b._rangeKm||0) > (ITEMS[a]._rangeKm||0) ? b._id : a, ITEMS[0]._id);
+const bestPriceId = ITEMS.reduce((a,b)=> (b._priceL||Infinity) < (ITEMS[a]._priceL||Infinity) ? b._id : a, ITEMS[0]._id);
+const bestSpeedId = ITEMS.reduce((a,b)=> (b._speed||0) > (ITEMS[a]._speed||0) ? b._id : a, ITEMS[0]._id);
+const MAX_SPEED_ALL = Math.max(...ITEMS.map(i=>i._speed||0));
+const MAX_PRICE_ALL = Math.max(...ITEMS.map(i=>i._priceL||0));
+function pct(v,max){ return Math.round(100*((v||0)/(max||1))); }
+
+function badgesFor(it){
+  const b = [];
+  if(it._id===bestRangeId) b.push('<span class="badge range">🔋 Longest range</span>');
+  if(it._id===bestPriceId) b.push('<span class="badge price">💰 Best price</span>');
+  if(it._id===bestSpeedId) b.push('<span class="badge speed">⚡ Fastest</span>');
+  return b.length ? `<div class="badge-row">${b.join('')}</div>` : '';
+}
+
+function cardHTML(it){
+  const color = it._color;
+  const rangeVal = it._rangeKm ?? 0;
+  const gauge = gaugeSVG(rangeVal, 220, color);
+  return `
+  <div class="card" data-id="${it._id}">
+    <div class="stripe" style="background:${color}"></div>
+    <div class="card-top">
+      <div class="card-id">
+        <div class="brand-tag" style="color:${color}">${it.brand}</div>
+        <div class="model-name">${it.model}</div>
+        <div class="variant-name">${it.variant}</div>
+      </div>
+      <div class="gauge-wrap">
+        ${gauge}
+        <div class="gauge-val">${it._rangeKm ?? '—'}</div>
+        <div class="gauge-unit">KM RANGE</div>
+      </div>
+    </div>
+    ${badgesFor(it)}
+    <div class="stat-row">
+      <div class="stat"><span class="k">Battery</span><span class="v">${it.battery.split('(')[0].trim()}</span></div>
+      <div class="stat">
+        <span class="k">Top speed</span><span class="v">${it._speed ?? '—'} km/h</span>
+        <div class="bar"><span style="width:${pct(it._speed,MAX_SPEED_ALL)}%; background:${color}"></span></div>
+      </div>
+      <div class="stat">
+        <span class="k">On-road BLR</span><span class="v">${it._priceL ? '₹'+it._priceL+'L' : '—'}</span>
+        <div class="bar"><span style="width:${pct(it._priceL,MAX_PRICE_ALL)}%; background:${color}"></span></div>
+      </div>
+    </div>
+    <div class="card-actions">
+      <label class="compare-label">
+        <input type="checkbox" class="cmpChk" data-id="${it._id}"> Compare
+      </label>
+      <button class="details-btn" data-id="${it._id}">Spec sheet ▾</button>
+    </div>
+    <div class="details" id="det-${it._id}">
+      ${DETAIL_GROUPS.map(([title,keys])=>`
+        <div class="dgroup">
+          <h4>${title}</h4>
+          ${keys.map(k=>`<div class="drow"><div class="dk">${LABELS[k]}</div><div class="dv ${k==='complaints'||k==='deepDischarge' ? 'warn':''}">${ynIcon(it[k])}</div></div>`).join('')}
+        </div>`).join('')}
+      <div class="dgroup"><h4>Sources</h4><div class="drow"><div class="dv" style="font-size:11px;color:var(--ink-faint)">${it.sources}</div></div></div>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const sortMode = document.getElementById('sortSel').value;
+  let list = ITEMS.filter(it => activeBrands.has(it.brand) &&
+    (it.model.toLowerCase().includes(q) || it.variant.toLowerCase().includes(q) || it.brand.toLowerCase().includes(q)) &&
+    (it._priceL==null || (it._priceL>=filterState.priceMin && it._priceL<=filterState.priceMax)) &&
+    (it._rangeKm==null || (it._rangeKm>=filterState.rangeMin && it._rangeKm<=filterState.rangeMax)) &&
+    filterState.chems.has(it._chem) &&
+    filterState.motors.has(it._motorFam) &&
+    (!filterState.ip67Only || it._ip67));
+
+  if(sortMode==='range_desc') list.sort((a,b)=>(b._rangeKm||0)-(a._rangeKm||0));
+  if(sortMode==='price_asc') list.sort((a,b)=>(a._priceL||999)-(b._priceL||999));
+  if(sortMode==='price_desc') list.sort((a,b)=>(b._priceL||0)-(a._priceL||0));
+  if(sortMode==='speed_desc') list.sort((a,b)=>(b._speed||0)-(a._speed||0));
+  if(sortMode==='battery_desc') list.sort((a,b)=>(b._battKwh||0)-(a._battKwh||0));
+  if(sortMode==='kerb_asc') list.sort((a,b)=>(a._kerbKg||999)-(b._kerbKg||999));
+  if(sortMode==='brand') list.sort((a,b)=> (a.brand+a.model+a.variant).localeCompare(b.brand+b.model+b.variant));
+
+  grid.innerHTML = list.map(cardHTML).join('');
+  countPill.textContent = `${list.length} / ${ITEMS.length} variants`;
+
+  grid.querySelectorAll('.details-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id;
+      const panel = document.getElementById('det-'+id);
+      const open = panel.classList.toggle('open');
+      btn.textContent = open ? 'Spec sheet ▴' : 'Spec sheet ▾';
+    });
+  });
+  grid.querySelectorAll('.cmpChk').forEach(chk=>{
+    chk.checked = selected.has(parseInt(chk.dataset.id));
+    chk.addEventListener('change', ()=>{
+      const id = parseInt(chk.dataset.id);
+      if(chk.checked){
+        if(selected.size>=4){ chk.checked=false; alert('You can compare up to 4 variants at a time.'); return; }
+        selected.add(id);
+      } else selected.delete(id);
+      renderTray();
+    });
+  });
+}
+
+document.getElementById('searchBox').addEventListener('input', render);
+document.getElementById('sortSel').addEventListener('change', render);
+
+// ---------------- TRAY ----------------
+const tray = document.getElementById('tray');
+const trayItems = document.getElementById('trayItems');
+const compareBtn = document.getElementById('compareBtn');
+
+function renderTray(){
+  const arr = [...selected];
+  tray.classList.toggle('show', arr.length>0);
+  trayItems.innerHTML = arr.map(id=>{
+    const it = ITEMS[id];
+    return `<span class="tray-chip">${it.model} — ${it.variant.split('(')[0].trim()}<button data-id="${id}">✕</button></span>`;
+  }).join('');
+  trayItems.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      selected.delete(parseInt(b.dataset.id));
+      renderTray();
+      const chk = grid.querySelector(`.cmpChk[data-id="${b.dataset.id}"]`);
+      if(chk) chk.checked=false;
+    });
+  });
+  compareBtn.disabled = arr.length<2;
+}
+compareBtn.addEventListener('click', ()=>openCompare([...selected]));
+
+// ---------------- MODAL ----------------
+const modalBg = document.getElementById('modalBg');
+const cmpTable = document.getElementById('cmpTable');
+const cmpBars = document.getElementById('cmpBars');
+document.getElementById('modalClose').addEventListener('click', ()=>modalBg.classList.remove('show'));
+modalBg.addEventListener('click', e=>{ if(e.target===modalBg) modalBg.classList.remove('show'); });
+document.getElementById('diffToggle').addEventListener('change', e=>{
+  cmpTable.classList.toggle('show-diff', e.target.checked);
+});
+
+const ALL_KEYS = Object.keys(IDX).filter(k=>!['brand','model','variant'].includes(k));
+
+const CMP_BAR_METRICS = [
+  {label:'Range (km, IDC claimed)', get:it=>it._rangeKm, fmt:v=>v+' km'},
+  {label:'On-road price (₹ Lakh)', get:it=>it._priceL, fmt:v=>'₹'+v+'L'},
+  {label:'Top speed (km/h)', get:it=>it._speed, fmt:v=>v+' km/h'},
+  {label:'Battery (kWh)', get:it=>it._battKwh, fmt:v=>v+' kWh'},
+  {label:'Kerb weight (kg)', get:it=>it._kerbKg, fmt:v=>v+' kg'},
+];
+function buildCmpBars(items){
+  return CMP_BAR_METRICS.map(m=>{
+    const vals = items.map(it=>m.get(it)||0);
+    const max = Math.max(...vals, 1);
+    return `<div class="cmp-bar-metric"><h5>${m.label}</h5>` +
+      items.map((it,i)=>{
+        const v = vals[i];
+        const p = Math.round(100*v/max);
+        return `<div class="cmp-bar-row">
+          <div class="cmp-bar-label" style="color:${it._color}">${it.model} — ${it.variant.split('(')[0].trim()}</div>
+          <div class="cmp-bar-track"><div class="cmp-bar-fill" style="width:${p}%; background:${it._color}"></div></div>
+          <div class="cmp-bar-val">${v ? m.fmt(v) : '—'}</div>
+        </div>`;
+      }).join('') + '</div>';
+  }).join('');
+}
+
+const CMP_METRIC_MAP = {
+  range:{get:it=>it._rangeKm, better:'high'},
+  price:{get:it=>it._priceL, better:'low'},
+  maxSpeed:{get:it=>it._speed, better:'high'},
+  battery:{get:it=>it._battKwh, better:'high'},
+  kerb:{get:it=>it._kerbKg, better:'low'},
+};
+
+function openCompare(ids){
+  const items = ids.map(id=>ITEMS[id]);
+  let thead = '<thead><tr><th>Spec</th>' + items.map(it=>`<th style="color:${it._color}">${it.brand}<br>${it.model}<br><span style="font-weight:400;text-transform:none;font-family:var(--sans)">${it.variant}</span></th>`).join('') + '</tr></thead>';
+
+  let tbody = '<tbody>' + ALL_KEYS.map(k=>{
+    const metric = CMP_METRIC_MAP[k];
+    let cells, differs;
+    if(metric){
+      const vals = items.map(it=>metric.get(it));
+      const defined = vals.filter(v=>v!=null);
+      const allSame = defined.length===vals.length && defined.every(v=>v===defined[0]);
+      const best = defined.length ? (metric.better==='high' ? Math.max(...defined) : Math.min(...defined)) : null;
+      differs = !allSame;
+      cells = items.map((it,i)=>{
+        const v = vals[i];
+        const cls = !allSame && v!=null && v===best ? 'best' : '';
+        return `<td class="${cls}">${it[k]}</td>`;
+      }).join('');
+    } else {
+      const raw = items.map(it=>it[k]);
+      differs = !raw.every(v=>v===raw[0]);
+      cells = items.map(it=>`<td>${ynIcon(it[k])}</td>`).join('');
+    }
+    return `<tr class="${differs?'differs':''}"><th>${LABELS[k]}</th>${cells}</tr>`;
+  }).join('') + '</tbody>';
+
+  cmpTable.innerHTML = thead + tbody;
+  cmpBars.innerHTML = buildCmpBars(items);
+  modalBg.classList.add('show');
+}
+
+render();
+renderTray();
+</script>
+</body>
+</html>
